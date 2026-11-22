@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hangul — Học tiếng Hàn</title>
+<meta name="theme-color" content="#c94f6d">
+<style>
+:root{--bg:#f6efe9;--surface:#fffaf6;--fg:#2b2528;--muted:#7a6f74;--primary:#c94f6d;--primary-fg:#fff;--border:#e6d8d0;--ok:#2e9e5b;--r:16px}
+@media(prefers-color-scheme:dark){:root{--bg:#17131a;--surface:#221c26;--fg:#f1e9ee;--muted:#a89ca3;--border:#392f3e}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif}
+a{color:inherit;text-decoration:none}h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.15;margin:.2em 0}h2{margin:.2em 0}h3{margin:.3em 0}
+.shell{min-height:100vh;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:20px;padding:12px max(20px,calc((100% - 1100px)/2));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.2rem}
+.mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--primary);color:var(--primary-fg)}
+.nav{display:flex;gap:4px;flex:1}.nav a,.bottom-nav a{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;color:var(--muted)}
+.nav a.active,.bottom-nav a.active{background:var(--primary);color:var(--primary-fg)}
+.user-pill{color:var(--muted);font-size:.9rem}
+.main{flex:1;width:100%;max-width:1100px;margin:0 auto;padding:32px 20px 100px}
+.footer{text-align:center;color:var(--muted);font-size:.85rem;padding:20px 20px 90px}
+.bottom-nav{display:none}
+@media(max-width:760px){.topbar .nav,.user-pill{display:none}.bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:5;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border)}.bottom-nav a{flex-direction:column;gap:0;font-size:.72rem;padding:6px 10px;border-radius:12px}}
+.eyebrow{color:var(--primary);font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.lead{color:var(--muted);font-size:1.05rem}
+.hero{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:center;margin-bottom:40px}
+@media(max-width:760px){.hero{grid-template-columns:1fr}}
+.hero h1 span{color:var(--primary)}
+.hero-note,.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.hangul,.korean{font-family:"Noto Serif KR","Malgun Gothic",serif;font-size:2.6rem;font-weight:700;margin:.2em 0}
+.korean{font-size:clamp(2.4rem,9vw,4rem)}
+.button{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;font:inherit;font-weight:600;padding:10px 18px;border-radius:999px;background:var(--primary);color:var(--primary-fg)}
+.button:hover{filter:brightness(1.08)}.button.secondary{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+.button.ghost{background:transparent;color:var(--fg);border:1px solid var(--border)}
+:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.section-head,.toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:24px 0 16px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.pack-card{display:flex;flex-direction:column;gap:4px}.pack-card .emoji{font-size:2rem}
+.meta{margin-top:auto;display:flex;flex-direction:column;gap:10px;color:var(--muted);font-size:.9rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-block;padding:3px 12px;border-radius:999px;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);font-size:.82rem;font-weight:600}
+.subnav{display:flex;gap:8px;margin:12px 0 20px}
+.study-card{text-align:center;min-height:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;margin-bottom:16px}
+.meaning{font-size:1.6rem;font-weight:700;color:var(--primary)}
+.study-actions{display:flex;gap:12px;justify-content:center}
+.answer-list{display:grid;gap:10px;margin-top:16px}
+.answer{font:inherit;text-align:left;padding:14px 18px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--fg);cursor:pointer}
+.answer:hover{border-color:var(--primary)}
+.empty{text-align:center;padding:40px 20px}.empty h1{font-size:3rem;color:var(--primary)}
+.notice{padding:12px 16px;border-radius:12px;background:color-mix(in srgb,var(--primary) 10%,transparent);color:var(--muted)}
+.chat{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+.bubble{max-width:85%;padding:10px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--border)}
+.bubble.mine{align-self:flex-end;background:var(--primary);color:var(--primary-fg);border-color:transparent}
+.chat-form{display:flex;gap:10px;align-items:end}
+textarea,input:not([type=file]){flex:1;font:inherit;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--fg)}
+textarea{min-height:56px;resize:vertical}
+.grammar-item p{margin:.4em 0}
+.field{display:grid;gap:4px;margin-bottom:12px;font-size:.9rem;color:var(--muted)}.field input,.field textarea{width:100%}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border)}
+.button.sm{padding:5px 12px;font-size:.85rem}.danger{color:#d64545!important}
+summary{cursor:pointer;font-weight:600}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// Hangul – 1 web duy nhất + Supabase (hash routing, mở trực tiếp được): không API, không OAuth, không thư viện bên thứ 3.
+// Nội dung học lưu trên Supabase; tiến độ học lưu ở localStorage của trình duyệt.
+
+// ---------- Supabase (gọi REST trực tiếp, không cần thư viện) ----------
+const SUPABASE_URL = "https://gvzsupanpcayufypjyzk.supabase.co";   // Project Settings → API → Project URL
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2enN1cGFucGNheXVmeXBqeXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNTQzMDgsImV4cCI6MjExMDkzMDMwOH0.5VnqyZMyRhmPcEDFy8lHOcvmhaAT_ASwZWksKlf1c7s";          // khoá "anon public". TUYỆT ĐỐI không dùng service_role.
+const PACKS = [], GRAMMAR = [];
+let loadError = false, loadErrorMsg = "";
+const sb = async (path, { method = "GET", body } = {}) => {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method, body: body && JSON.stringify(body),
+    headers: { apikey: SUPABASE_ANON_KEY, ...(SUPABASE_ANON_KEY.startsWith("eyJ") ? { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } : {}), "Content-Type": "application/json" } });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.message || `Lỗi ${r.status}`);
+  return j;
+};
+const rpc = (fn, args) => sb(`rpc/${fn}`, { method: "POST", body: args });
+const mapWord = w => ({ id: w.id, korean: w.korean, romanization: w.romanization, meaningVi: w.meaning_vi, exampleKo: w.example_ko, exampleVi: w.example_vi });
+const mapPack = p => ({ id: p.id, title: p.title, description: p.description, level: p.level, topic: p.topic, coverEmoji: p.cover_emoji, isPublished: p.is_published,
+  words: [...(p.words || [])].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id).map(mapWord) });
+const mapGram = g => ({ id: g.id, level: g.level, topic: g.topic, structure: g.structure, title: g.title, meaning: g.meaning, exampleKo: g.example_ko, exampleVi: g.example_vi });
+const fill = (packs, grammar) => { PACKS.splice(0, PACKS.length, ...packs.map(mapPack)); GRAMMAR.splice(0, GRAMMAR.length, ...grammar.map(mapGram)); };
+const CACHE_KEY = "hangul.content.cache";
+async function loadPublic() {
+  try {
+    const [p, g] = await Promise.all([sb("packs?select=*,words(*)&is_published=eq.true&order=sort_order,id"), sb("grammar?select=*&order=sort_order,id")]);
+    fill(p, g); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ p, g })); } catch {}
+    return true;
+  } catch (e) {
+    loadErrorMsg = e?.message || String(e);
+    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); fill(c.p, c.g); } catch {}
+    return false;
+  }
+}
+
+// ---------- Lưu trữ local ----------
+const STORE_KEY = "hangul.local.v1";
+const defaults = () => ({ user: null, progress: {}, sessions: [], chat: [] });
+function load() {
+  try { return { ...defaults(), ...JSON.parse(localStorage.getItem(STORE_KEY) || "{}") }; }
+  catch { return defaults(); }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ user: state.user, progress: state.progress, sessions: state.sessions })); } catch {}
+}
+const state = load();
+const visible = () => PACKS.filter(p => p.isPublished !== false);
+
+// ---------- Trạng thái giao diện ----------
+const app = document.querySelector("#app");
+let currentPack = null, cardIndex = 0, revealed = false;
+let quizIndex = 0, quizCorrect = 0, quizWrong = [];
+const path = () => location.hash.slice(1) || "/";
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const link = (href, title, icon) => `<a href="#${href}" data-route class="${path() === href ? "active" : ""}"><b>${icon}</b><span>${title}</span></a>`;
+const shuffle = a => a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map(x => x[1]);
+
+function shell(content) {
+  const nav = `<nav class="nav">${link("/", "Hôm nay", "⌂")}${link("/vocabulary", "Từ vựng", "가")}${link("/grammar", "Ngữ pháp", "文")}${link("/tutor", "Gia sư", "✦")}${link("/profile", "Cá nhân", "◉")}</nav>`;
+  app.innerHTML = `<div class="shell"><header class="topbar"><a href="#/" data-route class="brand"><span class="mark">ㅎ</span>Hangul</a>${nav}<span class="user-pill">${state.user ? `Xin chào, ${esc(state.user.name)}` : "Học một chút, nhớ lâu hơn"}</span></header><main id="main" class="main">${loadError ? `<div class="notice" style="margin-bottom:16px">Không kết nối được Supabase — đang dùng dữ liệu đã lưu trên máy (nếu có). Lý do: <b>${esc(loadErrorMsg)}</b></div>` : ""}${content}</main><nav class="bottom-nav">${link("/", "Hôm nay", "⌂")}${link("/vocabulary", "Từ", "가")}${link("/grammar", "Ngữ pháp", "文")}${link("/tutor", "Gia sư", "✦")}${link("/profile", "Tôi", "◉")}</nav><footer class="footer">Hangul · Học tiếng Hàn từng ngày, theo nhịp của bạn. · <a href="#/admin">Quản trị</a></footer></div>`;
+}
+
+const packCards = items => items.map(p => `<article class="card pack-card"><span class="emoji">${esc(p.coverEmoji)}</span><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><div class="meta"><span>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</span><span class="row"><a class="button secondary" href="#/lesson/${p.id}" data-route>Học →</a><a class="button ghost" href="#/quiz/${p.id}" data-route>Kiểm tra</a></span></div></article>`).join("");
+
+// ---------- Trang ----------
+function home() {
+  const day = Math.floor(Date.now() / 86400000);
+  const all = visible().flatMap(p => p.words);
+  const w = all.length ? all[day % all.length] : { korean: "안녕", romanization: "annyeong", meaningVi: "Xin chào" };
+  shell(`<section class="hero"><div><div class="eyebrow">안녕하세요 · Chào bạn</div><h1>Học một chút,<br/><span>nhớ lâu hơn.</span></h1><p class="lead">Mỗi ngày thêm một từ, mỗi tuần tự tin hơn với tiếng Hàn.</p><a class="button" href="#/vocabulary" data-route>Khám phá từ vựng <span>→</span></a></div><aside class="hero-note"><div class="eyebrow">Từ hôm nay</div><div class="hangul" lang="ko">${esc(w.korean)}</div><strong>${esc(w.romanization)}</strong><p>${esc(w.meaningVi)}</p></aside></section><div class="section-head"><div><div class="eyebrow">Bắt đầu hành trình</div><h2>Bộ từ dành cho bạn</h2></div><a href="#/vocabulary" data-route class="button ghost">Xem tất cả</a></div><div class="grid">${packCards(visible())}</div>`);
+}
+
+function vocabulary() {
+  shell(`<div class="eyebrow">Thư viện học tập</div><h1>Từ vựng</h1><p class="lead">Chọn một bộ từ để học theo chủ đề.</p><div class="subnav"><span class="chip">${visible().length} bộ từ</span><span class="chip">Dữ liệu offline</span></div><div class="grid">${packCards(visible())}</div>`);
+}
+
+function grammarPage() {
+  shell(`<div class="eyebrow">Ngữ pháp Hàn Quốc</div><h1>Cấu trúc rõ ràng, ví dụ gần gũi.</h1><p class="lead">Đọc cách dùng và xem ví dụ Hàn–Việt.</p><div class="grid">${GRAMMAR.map(g => `<article class="card grammar-item"><div><span class="chip">${esc(g.level)} · ${esc(g.topic)}</span><h3>${esc(g.structure)}</h3><strong>${esc(g.title)}</strong><p>${esc(g.meaning)}</p><p><span lang="ko">${esc(g.exampleKo)}</span><br/>${esc(g.exampleVi)}</p></div></article>`).join("")}</div>`);
+}
+
+function lesson(id) {
+  currentPack = visible().find(p => p.id === id);
+  if (!currentPack) return shell(`<div class="card empty">Không tìm thấy bộ từ. <a href="#/vocabulary" data-route>Quay lại thư viện</a></div>`);
+  if (!currentPack.words.length) return shell(`<div class="card empty">Bộ từ này chưa có từ nào. <a href="#/vocabulary">Quay lại</a></div>`);
+  cardIndex = 0; revealed = false; renderCard();
+}
+
+function renderCard() {
+  const word = currentPack.words[cardIndex];
+  shell(`<div class="toolbar"><a href="#/vocabulary" data-route class="button ghost">← Thư viện</a><span class="chip">${esc(currentPack.title)} · ${cardIndex + 1}/${currentPack.words.length}</span></div><div class="card study-card" id="flip" role="button" tabindex="0" aria-label="Lật thẻ từ"><div class="eyebrow">${revealed ? "Nghĩa tiếng Việt" : "Tiếng Hàn · chạm để lật"}</div><div class="korean" lang="ko">${esc(word.korean)}</div>${revealed ? `<div class="meaning">${esc(word.meaningVi)}</div><p class="lead">${esc(word.romanization)}</p>${word.exampleKo ? `<p lang="ko">${esc(word.exampleKo)}</p><p>${esc(word.exampleVi)}</p>` : ""}` : `<p class="lead">${esc(word.romanization)}</p>`}</div><div class="study-actions">${revealed ? `<button class="button secondary" data-remember="false">Chưa nhớ</button><button class="button" data-remember="true">Đã nhớ</button>` : `<button class="button" id="reveal">Xem nghĩa →</button>`}</div>`);
+  const flip = () => { revealed = !revealed; renderCard(); };
+  document.querySelector("#flip").onclick = flip;
+  document.querySelector("#flip").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } };
+  document.querySelector("#reveal")?.addEventListener("click", () => { revealed = true; renderCard(); });
+  document.querySelectorAll("[data-remember]").forEach(b => b.onclick = () => {
+    const prev = state.progress[word.id] || { seen: 0 };
+    state.progress[word.id] = { seen: prev.seen + 1, remembered: b.dataset.remember === "true" };
+    save();
+    cardIndex = (cardIndex + 1) % currentPack.words.length;
+    revealed = false; renderCard();
+  });
+}
+
+function quiz(id) {
+  currentPack = visible().find(p => p.id === id);
+  if (!currentPack) return shell(`<div class="card empty">Không tìm thấy bài kiểm tra.</div>`);
+  if (!currentPack.words.length) return shell(`<div class="card empty">Bộ từ này chưa có từ nào. <a href="#/vocabulary">Quay lại</a></div>`);
+  quizIndex = 0; quizCorrect = 0; quizWrong = []; renderQuiz();
+}
+
+function renderQuiz() {
+  const words = currentPack.words, total = Math.min(10, words.length);
+  if (quizIndex >= total) {
+    const pct = total ? Math.round(quizCorrect / total * 100) : 0;
+    state.sessions.push({ packId: currentPack.id, total, correct: quizCorrect, wrong: quizWrong, at: Date.now() });
+    save();
+    return shell(`<div class="card empty"><div class="eyebrow">Hoàn thành</div><h1>${pct}%</h1><p>Bạn trả lời đúng ${quizCorrect}/${total} câu.</p><div class="row" style="justify-content:center"><a class="button" href="#/lesson/${currentPack.id}" data-route>Học lại bộ từ</a><a class="button secondary" href="#/vocabulary" data-route>Về thư viện</a></div></div>`);
+  }
+  const word = words[quizIndex];
+  const choices = shuffle([word, ...shuffle(words.filter(w => w.id !== word.id)).slice(0, 3)]);
+  shell(`<div class="toolbar"><a class="button ghost" href="#/vocabulary" data-route>← Thư viện</a><span class="chip">Câu ${quizIndex + 1}/${total}</span></div><div class="card" style="text-align:center"><div class="eyebrow">Chọn nghĩa đúng</div><div class="korean" lang="ko">${esc(word.korean)}</div></div><div class="answer-list">${choices.map(c => `<button class="answer" data-choice="${c.id}">${esc(c.meaningVi)}</button>`).join("")}</div>`);
+  document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => {
+    if (Number(b.dataset.choice) === word.id) quizCorrect++; else quizWrong.push(word.id);
+    quizIndex++; renderQuiz();
+  });
+}
+
+// Gia sư offline: tra cứu trong từ vựng + ngữ pháp có sẵn, không gọi AI bên ngoài.
+function localTutor(prompt) {
+  const q = prompt.toLowerCase();
+  const words = visible().flatMap(p => p.words).filter(w =>
+    q.includes(w.korean) || q.includes(w.romanization.toLowerCase()) || (w.meaningVi.length > 2 && q.includes(w.meaningVi.toLowerCase())));
+  const gram = GRAMMAR.filter(g => {
+    const marks = g.structure.replace(/N \+ |V\/A \+ /, "").split("/");
+    return marks.some(m => q.includes(m)) || q.includes(g.title.toLowerCase());
+  });
+  const out = [];
+  if (/은\/는|이\/가|은|는/.test(q) && /(phân biệt|khác)/.test(q))
+    out.push("은/는 nêu chủ đề hoặc đối chiếu (\"còn tôi thì…\"); 이/가 đánh dấu chủ ngữ và nhấn mạnh thông tin mới (\"chính là…\").");
+  gram.forEach(g => out.push(`${g.structure} – ${g.title}: ${g.meaning} Ví dụ: ${g.exampleKo} (${g.exampleVi})`));
+  words.slice(0, 5).forEach(w => out.push(`${w.korean} [${w.romanization}] = ${w.meaningVi}${w.exampleKo ? `. Ví dụ: ${w.exampleKo} (${w.exampleVi})` : ""}`));
+  return out.length ? out.join("\n\n")
+    : "Mình chỉ tra cứu trong dữ liệu offline của ứng dụng. Hãy thử nhập một từ/ngữ pháp có sẵn như 안녕하세요, 은/는, 이/가, 아요/어요.";
+}
+
+function tutor() {
+  shell(`<div class="eyebrow">Gia sư offline</div><h1>Tra cứu nhanh từ & ngữ pháp.</h1><p class="lead">Chạy hoàn toàn trên máy bạn, không gửi dữ liệu đi đâu.</p><div class="chat">${state.chat.map(m => `<div class="bubble ${m.role === "user" ? "mine" : ""}" style="white-space:pre-line">${esc(m.content)}</div>`).join("")}</div><form class="chat-form" id="chat-form"><textarea name="prompt" placeholder="Ví dụ: Phân biệt 은/는 và 이/가" required maxlength="500"></textarea><button class="button">Gửi</button></form>`);
+  document.querySelector("#chat-form").onsubmit = e => {
+    e.preventDefault();
+    const prompt = String(new FormData(e.currentTarget).get("prompt") || "").trim();
+    if (!prompt) return;
+    state.chat.push({ role: "user", content: prompt }, { role: "assistant", content: localTutor(prompt) });
+    state.chat = state.chat.slice(-30); save(); tutor();
+  };
+}
+
+function profile() {
+  const done = Object.values(state.progress), s = state.sessions;
+  const avg = s.length ? Math.round(s.reduce((a, x) => a + x.correct / x.total, 0) / s.length * 100) : 0;
+  shell(`<div class="eyebrow">Hồ sơ học tập</div><h1>Cá nhân</h1><div class="card">${state.user
+    ? `<h2>${esc(state.user.name)}</h2><span class="chip">Hồ sơ local</span><p class="lead">Tiến độ lưu ngay trên trình duyệt này.</p><div class="row"><button class="button secondary" id="export">Xuất tiến độ</button><label class="button ghost">Nhập<input id="import" type="file" accept="application/json" hidden></label><button class="button ghost" id="reset">Xoá dữ liệu</button></div>`
+    : `<h2>Chào mừng bạn đến với Hangul</h2><p class="lead">Nhập tên để lưu tiến độ trên thiết bị này (không cần tài khoản).</p><form id="name-form" class="row"><input name="name" placeholder="Tên của bạn" required maxlength="40"><button class="button">Bắt đầu</button></form>`}</div><div class="section-head"><h2>Tóm tắt tiến độ</h2></div><div class="grid"><div class="card"><div class="eyebrow">Từ đã học</div><h2>${done.length}</h2></div><div class="card"><div class="eyebrow">Đã thuộc</div><h2>${done.filter(x => x.remembered).length}</h2></div><div class="card"><div class="eyebrow">Điểm trung bình</div><h2>${avg}%</h2></div></div>`);
+  document.querySelector("#name-form")?.addEventListener("submit", e => {
+    e.preventDefault();
+    state.user = { name: String(new FormData(e.currentTarget).get("name")).trim() }; save(); profile();
+  });
+  document.querySelector("#export")?.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ user: state.user, progress: state.progress, sessions: state.sessions })], { type: "application/json" }));
+    a.download = "hangul-progress.json"; a.click(); URL.revokeObjectURL(a.href);
+  });
+  document.querySelector("#import")?.addEventListener("change", async e => {
+    try { const d = JSON.parse(await e.target.files[0].text()); Object.assign(state, { user: d.user ?? null, progress: d.progress ?? {}, sessions: d.sessions ?? [] }); save(); profile(); } catch { alert("File không hợp lệ."); }
+  });
+  document.querySelector("#reset")?.addEventListener("click", () => {
+    if (confirm("Xoá toàn bộ tiến độ và hồ sơ?")) { Object.assign(state, defaults()); save(); renderPage(); }
+  });
+}
+
+// ---------- Quản trị (mã được kiểm tra ở server Supabase qua các hàm admin_*) ----------
+let adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null;
+const adminLoad = async () => { const d = await rpc("admin_list", { p_pin: adminPin }); fill(d.packs, d.grammar); };
+const call = async (fn, args) => {
+  try { const r = await rpc(fn, { p_pin: adminPin, ...args }); await adminLoad(); admin(); return r; }
+  catch (e) { alert(e.message); admin(); }
+};
+const strip = ({ words, ...rest }) => rest;
+const download = (name, text, type = "application/json") => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+};
+const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+function parseCsvLine(l) {
+  const out = []; let cur = "", q = false;
+  for (let i = 0; i < l.length; i++) {
+    const c = l[i];
+    if (q) { if (c === '"' && l[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === "," || c === "\t") { out.push(cur.trim()); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur.trim()); return out;
+}
+const fld = (name, label, val = "", o = {}) => `<label class="field"><span>${label}</span>${o.area
+  ? `<textarea name="${name}" rows="3" ${o.req ? "required" : ""}>${esc(val)}</textarea>`
+  : `<input name="${name}" value="${esc(val)}" ${o.req ? "required" : ""}>`}</label>`;
+const btn = (act, label, attrs = "", cls = "") => `<button type="button" class="button sm ${cls}" data-act="${act}" ${attrs}>${label}</button>`;
+
+function adminGate() {
+  shell(`<div class="eyebrow">Quản trị</div><h1>Đăng nhập quản trị</h1><div class="card"><form id="gate" class="row"><input type="password" name="pin" placeholder="Mã quản trị" required autocomplete="current-password"><button class="button">Mở khoá</button></form></div><p class="notice">Mã được kiểm tra trên Supabase, nên người dùng khác không thể sửa dữ liệu nếu không biết mã.</p>`);
+  document.querySelector("#gate").onsubmit = async e => {
+    e.preventDefault(); adminPin = String(new FormData(e.currentTarget).get("pin"));
+    try { await adminLoad(); admin(); } catch (err) { adminPin = null; alert(err.message); }
+  };
+}
+
+function adminPacks() {
+  return `<div class="section-head"><h2>Bộ từ (${PACKS.length})</h2>${btn("new-pack", "+ Thêm bộ")}</div>` +
+    (PACKS.map((p, i) => `<div class="item"><div><strong>${esc(p.coverEmoji)} ${esc(p.title)}</strong> ${p.isPublished === false ? '<span class="chip">Đã ẩn</span>' : ""}<br><small>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</small></div><div class="row">${btn("words", "Từ vựng", `data-id="${p.id}"`)}${btn("edit-pack", "Sửa", `data-id="${p.id}"`, "secondary")}${btn("toggle-pack", p.isPublished === false ? "Hiện" : "Ẩn", `data-id="${p.id}"`, "ghost")}${btn("dup-pack", "Nhân bản", `data-id="${p.id}"`, "ghost")}${btn("up-pack", "↑", `data-i="${i}"`, "ghost")}${btn("down-pack", "↓", `data-i="${i}"`, "ghost")}${btn("del-pack", "Xoá", `data-id="${p.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Chưa có bộ từ nào.</div>`);
+}
+
+function adminWords() {
+  const p = PACKS.find(x => x.id === adminPackId);
+  if (!p) { adminPackId = null; return adminPacks(); }
+  return `${btn("back", "← Danh sách bộ", "", "ghost")}<div class="section-head"><h2>${esc(p.title)} · ${p.words.length} từ</h2><div class="row">${btn("new-word", "+ Thêm từ")}${btn("export-csv", "Xuất CSV", `data-id="${p.id}"`, "ghost")}</div></div>` +
+    (p.words.map(w => `<div class="item"><div><strong lang="ko">${esc(w.korean)}</strong> · ${esc(w.romanization)}<br><small>${esc(w.meaningVi)}</small></div><div class="row">${btn("edit-word", "Sửa", `data-id="${w.id}"`, "secondary")}${btn("del-word", "Xoá", `data-id="${w.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Bộ này chưa có từ nào.</div>`) +
+    `<details class="card" style="margin-top:16px"><summary>Nhập hàng loạt (CSV)</summary><form data-form="csv"><p class="notice">Mỗi dòng một từ: tiếng Hàn, phiên âm, nghĩa, ví dụ Hàn, dịch ví dụ (phân cách bằng dấu phẩy hoặc Tab).</p><textarea name="csv" rows="6" style="width:100%;margin:10px 0" required></textarea><button class="button sm">Nhập</button></form></details>`;
+}
+
+function adminGrammar() {
+  return `<div class="section-head"><h2>Ngữ pháp (${GRAMMAR.length})</h2>${btn("new-gram", "+ Thêm bài")}</div>` +
+    (GRAMMAR.map((g, i) => `<div class="item"><div><strong>${esc(g.structure)}</strong> · ${esc(g.title)}<br><small>${esc(g.level)} · ${esc(g.topic)}</small></div><div class="row">${btn("edit-gram", "Sửa", `data-i="${i}"`, "secondary")}${btn("up-gram", "↑", `data-i="${i}"`, "ghost")}${btn("down-gram", "↓", `data-i="${i}"`, "ghost")}${btn("del-gram", "Xoá", `data-i="${i}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Chưa có bài ngữ pháp nào.</div>`);
+}
+
+function adminData() {
+  return `<div class="card"><h2>Sao lưu nội dung</h2><p class="lead">Xuất toàn bộ nội dung ra JSON. Nhập JSON sẽ THAY THẾ toàn bộ dữ liệu trên Supabase.</p><div class="row">${btn("export-content", "Xuất JSON")}<label class="button ghost sm">Nhập JSON<input id="imp-content" type="file" accept="application/json" hidden></label></div></div><div class="card" style="margin-top:16px"><h2>Đổi mã quản trị</h2><form data-form="pin" class="row"><input type="password" name="pin" minlength="8" placeholder="Mã mới (≥ 8 ký tự)" required><button class="button sm">Đổi mã</button></form></div>`;
+}
+
+function adminForm() {
+  const e = adminEdit; let title, fields;
+  if (e.k === "pack") {
+    const p = (e.id && PACKS.find(x => x.id === e.id)) || {};
+    title = e.id ? "Sửa bộ từ" : "Thêm bộ từ";
+    fields = fld("title", "Tên bộ", p.title, { req: 1 }) + fld("description", "Mô tả", p.description, { area: 1 }) + fld("level", "Cấp độ", p.level ?? "Sơ cấp") + fld("topic", "Chủ đề", p.topic) + fld("coverEmoji", "Biểu tượng (emoji)", p.coverEmoji ?? "📘");
+  } else if (e.k === "word") {
+    const w = (e.id && PACKS.flatMap(p => p.words).find(x => x.id === e.id)) || {};
+    title = e.id ? "Sửa từ" : "Thêm từ";
+    fields = fld("korean", "Tiếng Hàn", w.korean, { req: 1 }) + fld("romanization", "Phiên âm", w.romanization) + fld("meaningVi", "Nghĩa tiếng Việt", w.meaningVi, { req: 1 }) + fld("exampleKo", "Ví dụ (Hàn)", w.exampleKo) + fld("exampleVi", "Dịch ví dụ", w.exampleVi);
+  } else {
+    const g = (e.i != null && GRAMMAR[e.i]) || {};
+    title = e.i != null ? "Sửa bài ngữ pháp" : "Thêm bài ngữ pháp";
+    fields = fld("level", "Cấp độ", g.level ?? "Sơ cấp") + fld("topic", "Chủ đề", g.topic) + fld("structure", "Cấu trúc (công thức)", g.structure, { req: 1 }) + fld("title", "Tên bài", g.title, { req: 1 }) + fld("meaning", "Ý nghĩa / cách dùng", g.meaning, { area: 1 }) + fld("exampleKo", "Ví dụ (Hàn)", g.exampleKo) + fld("exampleVi", "Dịch ví dụ", g.exampleVi);
+  }
+  return `<div class="card"><h2>${title}</h2><form data-form="${e.k}">${fields}<div class="row"><button class="button">Lưu</button>${btn("cancel", "Huỷ", "", "ghost")}</div></form></div>`;
+}
+
+async function adminClick(e) {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act, id = Number(b.dataset.id), i = Number(b.dataset.i);
+  const pack = PACKS.find(p => p.id === id);
+  const moved = (arr, from, to) => { const a = arr.map(x => x.id); if (to < 0 || to >= a.length) return null; a.splice(to, 0, a.splice(from, 1)[0]); return a; };
+  const reorder = (table, arr, from, to) => { const a = moved(arr, from, to); if (a) return call("admin_reorder", { p_table: table, p_ids: a }); };
+  switch (act) {
+    case "tab": adminTab = b.dataset.tab; adminEdit = null; adminPackId = null; return admin();
+    case "lock": adminPin = null; await loadPublic(); return renderPage();
+    case "cancel": adminEdit = null; return admin();
+    case "back": adminPackId = null; return admin();
+    case "words": adminPackId = id; return admin();
+    case "new-pack": adminEdit = { k: "pack", id: null }; return admin();
+    case "edit-pack": adminEdit = { k: "pack", id }; return admin();
+    case "new-word": adminEdit = { k: "word", id: null }; return admin();
+    case "edit-word": adminEdit = { k: "word", id }; return admin();
+    case "new-gram": adminEdit = { k: "gram", i: null }; return admin();
+    case "edit-gram": adminEdit = { k: "gram", i }; return admin();
+    case "export-content": return download("hangul-content.json", JSON.stringify({ packs: PACKS, grammar: GRAMMAR }, null, 2));
+    case "export-csv": return download(`${pack.title}.csv`, "\ufeff" + pack.words.map(w => [w.korean, w.romanization, w.meaningVi, w.exampleKo, w.exampleVi].map(csvCell).join(",")).join("\n"), "text/csv");
+    case "toggle-pack": return call("admin_save_pack", { p: { ...strip(pack), isPublished: pack.isPublished === false } });
+    case "dup-pack":
+      try {
+        const nid = await rpc("admin_save_pack", { p_pin: adminPin, p: { ...strip(pack), id: null, title: pack.title + " (bản sao)" } });
+        await rpc("admin_import_words", { p_pin: adminPin, p_pack: nid, rows: pack.words });
+        await adminLoad(); return admin();
+      } catch (err) { return alert(err.message); }
+    case "up-pack": return reorder("packs", PACKS, i, i - 1);
+    case "down-pack": return reorder("packs", PACKS, i, i + 1);
+    case "up-gram": return reorder("grammar", GRAMMAR, i, i - 1);
+    case "down-gram": return reorder("grammar", GRAMMAR, i, i + 1);
+    case "del-pack":
+      if (!confirm(`Xoá bộ "${pack.title}" và ${pack.words.length} từ trong đó?`)) return;
+      return call("admin_delete", { p_table: "packs", p_id: id });
+    case "del-word": {
+      const w = PACKS.flatMap(p => p.words).find(x => x.id === id);
+      if (!w || !confirm(`Xoá từ "${w.korean}"?`)) return;
+      return call("admin_delete", { p_table: "words", p_id: id });
+    }
+    case "del-gram":
+      if (!confirm(`Xoá bài "${GRAMMAR[i].structure}"?`)) return;
+      return call("admin_delete", { p_table: "grammar", p_id: GRAMMAR[i].id });
+  }
+}
+
+async function adminSubmit(e) {
+  e.preventDefault();
+  const f = e.target, kind = f.dataset.form, d = Object.fromEntries(new FormData(f));
+  const t = s => String(s ?? "").trim();
+  if (kind === "pack") {
+    const old = adminEdit.id && PACKS.find(x => x.id === adminEdit.id); adminEdit = null;
+    return call("admin_save_pack", { p: { id: old?.id ?? null, isPublished: old ? old.isPublished : true, title: t(d.title), description: t(d.description), level: t(d.level), topic: t(d.topic), coverEmoji: t(d.coverEmoji) || "📘" } });
+  }
+  if (kind === "word") {
+    const id = adminEdit.id; adminEdit = null;
+    return call("admin_save_word", { p: { id, packId: adminPackId, korean: t(d.korean), romanization: t(d.romanization), meaningVi: t(d.meaningVi), exampleKo: t(d.exampleKo), exampleVi: t(d.exampleVi) } });
+  }
+  if (kind === "gram") {
+    const g = adminEdit.i != null ? GRAMMAR[adminEdit.i] : null; adminEdit = null;
+    return call("admin_save_grammar", { p: { id: g?.id ?? null, level: t(d.level), topic: t(d.topic), structure: t(d.structure), title: t(d.title), meaning: t(d.meaning), exampleKo: t(d.exampleKo), exampleVi: t(d.exampleVi) } });
+  }
+  if (kind === "csv") {
+    const rows = String(d.csv).split(/\r?\n/).filter(l => l.trim()).map(parseCsvLine)
+      .filter(c => c[0] && c[2] && c[0].toLowerCase() !== "korean")
+      .map(([korean, romanization, meaningVi, exampleKo, exampleVi]) => ({ korean, romanization, meaningVi, exampleKo, exampleVi }));
+    if (!rows.length) return alert("Không có dòng hợp lệ.");
+    await call("admin_import_words", { p_pack: adminPackId, rows });
+    return alert(`Đã nhập ${rows.length} từ.`);
+  }
+  if (kind === "pin") {
+    try { await rpc("admin_change_pin", { p_pin: adminPin, p_new: t(d.pin) }); adminPin = t(d.pin); alert("Đã đổi mã quản trị."); }
+    catch (err) { alert(err.message); }
+  }
+}
+
+function admin() {
+  if (adminPin === null) return adminGate();
+  const tabs = [["packs", "Bộ từ"], ["grammar", "Ngữ pháp"], ["data", "Dữ liệu"]];
+  const body = adminEdit ? adminForm()
+    : adminTab === "packs" ? (adminPackId ? adminWords() : adminPacks())
+    : adminTab === "grammar" ? adminGrammar() : adminData();
+  shell(`<div class="eyebrow">Quản trị</div><h1>Nội dung học tập</h1><div class="row">${tabs.map(([k, v]) => btn("tab", v, `data-tab="${k}"`, adminTab === k && !adminEdit ? "" : "ghost")).join("")}${btn("lock", "Khoá", "", "ghost")}</div><div style="margin-top:20px">${body}</div>`);
+  const main = document.querySelector("#main");
+  main.onclick = adminClick;
+  main.onsubmit = adminSubmit;
+  main.onchange = async ev => {
+    if (ev.target.id !== "imp-content") return;
+    try {
+      const d = JSON.parse(await ev.target.files[0].text());
+      if (!Array.isArray(d.packs) || !Array.isArray(d.grammar) || d.packs.some(p => !Array.isArray(p.words))) throw 0;
+      if (!confirm("Thay thế TOÀN BỘ nội dung trên Supabase bằng file này?")) return;
+      await call("admin_replace_all", { p_data: { packs: d.packs, grammar: d.grammar } });
+    } catch { alert("File nội dung không hợp lệ."); }
+  };
+}
+
+function renderPage() {
+  const p = path();
+  if (p === "/" || p === "/index.html") return home();
+  if (p === "/vocabulary") return vocabulary();
+  if (p === "/grammar") return grammarPage();
+  if (p === "/tutor") return tutor();
+  if (p === "/profile") return profile();
+  if (p === "/admin") return admin();
+  const m = p.match(/^\/(lesson|quiz)\/(\d+)$/);
+  if (m) return m[1] === "lesson" ? lesson(Number(m[2])) : quiz(Number(m[2]));
+  shell(`<div class="card empty"><h1>Không tìm thấy trang</h1><a class="button" href="#/" data-route>Về trang chủ</a></div>`);
+}
+
+window.addEventListener("hashchange", () => { renderPage(); window.scrollTo(0, 0); });
+(async function init() {
+  shell(`<div class="card empty">Đang tải nội dung…</div>`);
+  loadError = !(await loadPublic());
+  renderPage();
+})();
+
+</script>
+</body>
+</html>
