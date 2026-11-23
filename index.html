@@ -327,7 +327,7 @@ function profile() {
 }
 
 // ---------- Quản trị (mã được kiểm tra ở server Supabase qua các hàm admin_*) ----------
-let adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null, adminPending = null, adminPendingG = null;
+let adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null, adminPending = null, adminPendingG = null, adminPendingP = null;
 const adminLoad = async () => { const d = await rpc("admin_list", { p_pin: adminPin }); fill(d.packs, d.grammar); };
 const call = async (fn, args) => {
   try { const r = await rpc(fn, { p_pin: adminPin, ...args }); await adminLoad(); admin(); return r; }
@@ -365,7 +365,8 @@ function adminGate() {
 
 function adminPacks() {
   return `<div class="section-head"><h2>Bộ từ (${PACKS.length})</h2>${btn("new-pack", "+ Thêm bộ")}</div>` +
-    (PACKS.map((p, i) => `<div class="item"><div><strong>${esc(p.coverEmoji)} ${esc(p.title)}</strong> ${p.isPublished === false ? '<span class="chip">Đã ẩn</span>' : ""}<br><small>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</small></div><div class="row">${btn("words", "Từ vựng", `data-id="${p.id}"`)}${btn("edit-pack", "Sửa", `data-id="${p.id}"`, "secondary")}${btn("toggle-pack", p.isPublished === false ? "Hiện" : "Ẩn", `data-id="${p.id}"`, "ghost")}${btn("dup-pack", "Nhân bản", `data-id="${p.id}"`, "ghost")}${btn("up-pack", "↑", `data-i="${i}"`, "ghost")}${btn("down-pack", "↓", `data-i="${i}"`, "ghost")}${btn("del-pack", "Xoá", `data-id="${p.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Chưa có bộ từ nào.</div>`);
+    (PACKS.map((p, i) => `<div class="item"><div><strong>${esc(p.coverEmoji)} ${esc(p.title)}</strong> ${p.isPublished === false ? '<span class="chip">Đã ẩn</span>' : ""}<br><small>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</small></div><div class="row">${btn("words", "Từ vựng", `data-id="${p.id}"`)}${btn("edit-pack", "Sửa", `data-id="${p.id}"`, "secondary")}${btn("toggle-pack", p.isPublished === false ? "Hiện" : "Ẩn", `data-id="${p.id}"`, "ghost")}${btn("dup-pack", "Nhân bản", `data-id="${p.id}"`, "ghost")}${btn("up-pack", "↑", `data-i="${i}"`, "ghost")}${btn("down-pack", "↓", `data-i="${i}"`, "ghost")}${btn("del-pack", "Xoá", `data-id="${p.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Chưa có bộ từ nào.</div>`) +
+    adminPackImportCard();
 }
 
 function adminWords() {
@@ -483,6 +484,25 @@ function stageGrammar(rows) {  // ngữ pháp: Cấp độ | Chủ đề | Cấu
   if (out.length > 300) return alert("Mỗi lần chỉ nhập tối đa 300 bài ngữ pháp. Hãy chia nhỏ file.");
   adminPendingG = { rows: out, dups }; admin();
 }
+function stagePacks(rows) {  // nhiều bộ từ: Chủ đề | Tiếng Hàn | Tiếng Việt (mỗi chủ đề = 1 bộ từ)
+  if (rows.length && /^(chủ đề|chu de|topic)/i.test(String(rows[0][0]).trim())) rows = rows.slice(1);
+  const groups = new Map(), seen = new Set(); let dups = 0, count = 0;
+  for (const c of rows) {
+    const [topic, korean, meaningVi] = [0, 1, 2].map(i => String(c[i] ?? "").trim());
+    if (!korean || !meaningVi) continue;
+    const t = topic || "Chưa phân loại", key = t.toLowerCase();
+    const existing = PACKS.find(p => p.title.toLowerCase() === key);
+    const k = key + "|" + korean + "|" + meaningVi;
+    if (seen.has(k) || existing?.words.some(w => w.korean === korean && w.meaningVi === meaningVi)) { dups++; continue; }
+    seen.add(k);
+    if (!groups.has(key)) groups.set(key, { topic: t, packId: existing?.id ?? null, rows: [] });
+    groups.get(key).rows.push({ korean, romanization: "", meaningVi, exampleKo: "", exampleVi: "" });
+    count++;
+  }
+  if (!count) return alert(dups ? "Tất cả các dòng đều đã có sẵn." : "Không có dòng hợp lệ (cần đủ cột Chủ đề | Tiếng Hàn | Tiếng Việt).");
+  if (count > 2000) return alert("Mỗi lần chỉ nhập tối đa 2000 từ. Hãy chia nhỏ file.");
+  adminPendingP = { groups: [...groups.values()], count, dups }; admin();
+}
 async function pickWords(file, handler = stage) {
   if (!file) return;
   try {
@@ -499,6 +519,11 @@ function adminImportCard() {
   const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: sẽ thêm ${p.rows.length} từ${p.dups ? ` (bỏ qua ${p.dups} dòng trùng)` : ""}</h3><div style="overflow-x:auto"><table><tr><th>Hàn</th><th>Phiên âm</th><th>Nghĩa</th><th>Ví dụ</th></tr>${p.rows.slice(0, 8).map(r => `<tr><td lang="ko">${esc(r.korean)}</td><td>${esc(r.romanization)}</td><td>${esc(r.meaningVi)}</td><td>${esc(r.exampleKo)}</td></tr>`).join("")}</table></div>${p.rows.length > 8 ? `<small>… và ${p.rows.length - 8} dòng nữa</small>` : ""}<div class="row" style="margin-top:12px">${btn("confirm-import", `Nhập ${p.rows.length} từ`)}${btn("cancel-import", "Huỷ", "", "ghost")}</div></div>` : "";
   return preview + `<div class="card" style="margin-top:16px"><h3>Thêm nhanh từ Excel</h3><p class="lead">Mỗi dòng một từ, cột theo thứ tự: <b>Tiếng Hàn | Phiên âm | Nghĩa | Ví dụ Hàn | Dịch ví dụ</b>. Có thể chỉ dùng 2 cột: <b>Tiếng Hàn | Nghĩa</b>. Dòng tiêu đề và dòng trùng sẽ tự bỏ qua.</p><div class="row"><label class="button sm">Chọn file Excel / CSV<input id="imp-words" type="file" accept=".xlsx,.csv,.tsv,.txt" hidden></label>${btn("tpl", "Tải file mẫu", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="csv" style="margin-top:10px"><textarea name="csv" rows="6" style="width:100%;margin-bottom:10px" placeholder="안녕하세요\tannyeonghaseyo\tXin chào" required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
 }
+function adminPackImportCard() {
+  const p = adminPendingP;
+  const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: ${p.count} từ vào ${p.groups.length} bộ${p.dups ? ` (bỏ qua ${p.dups} dòng trùng)` : ""}</h3><div style="overflow-x:auto"><table><tr><th>Chủ đề (bộ từ)</th><th>Số từ</th><th>Ví dụ</th><th></th></tr>${p.groups.map(g => `<tr><td>${esc(g.topic)}</td><td>${g.rows.length}</td><td><span lang="ko">${esc(g.rows[0].korean)}</span> – ${esc(g.rows[0].meaningVi)}</td><td>${g.packId ? '<span class="chip">Thêm vào bộ có sẵn</span>' : '<span class="chip">Bộ mới</span>'}</td></tr>`).join("")}</table></div><div class="row" style="margin-top:12px">${btn("confirm-import-p", `Nhập ${p.count} từ`)}${btn("cancel-import-p", "Huỷ", "", "ghost")}</div></div>` : "";
+  return preview + `<div class="card" style="margin-top:16px"><h3>Thêm nhanh nhiều bộ từ từ Excel</h3><p class="lead">Mỗi dòng một từ, 3 cột: <b>Chủ đề | Tiếng Hàn | Tiếng Việt</b>. Mỗi chủ đề sẽ thành một bộ từ (trùng tên bộ có sẵn thì thêm vào bộ đó). Dòng tiêu đề và dòng trùng tự bỏ qua.</p><div class="row"><label class="button sm">Chọn file Excel / CSV<input id="imp-packs" type="file" accept=".xlsx,.csv,.tsv,.txt" hidden></label>${btn("tpl-pack", "Tải file mẫu", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="pcsv" style="margin-top:10px"><textarea name="pcsv" rows="6" style="width:100%;margin-bottom:10px" placeholder="Chào hỏi\t안녕하세요\tXin chào" required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
+}
 
 async function adminClick(e) {
   const b = e.target.closest("[data-act]"); if (!b) return;
@@ -507,11 +532,12 @@ async function adminClick(e) {
   const moved = (arr, from, to) => { const a = arr.map(x => x.id); if (to < 0 || to >= a.length) return null; a.splice(to, 0, a.splice(from, 1)[0]); return a; };
   const reorder = (table, arr, from, to) => { const a = moved(arr, from, to); if (a) return call("admin_reorder", { p_table: table, p_ids: a }); };
   switch (act) {
-    case "tab": adminTab = b.dataset.tab; adminEdit = null; adminPackId = null; adminPending = null; adminPendingG = null; return admin();
+    case "tab": adminTab = b.dataset.tab; adminEdit = null; adminPackId = null; adminPending = null; adminPendingG = null; adminPendingP = null; return admin();
     case "lock": adminPin = null; await loadPublic(); return renderPage();
     case "cancel": adminEdit = null; return admin();
     case "cancel-import": adminPending = null; return admin();
     case "cancel-import-g": adminPendingG = null; return admin();
+    case "cancel-import-p": adminPendingP = null; return admin();
     case "confirm-import-g": {
       const rows = adminPendingG.rows; adminPendingG = null; let ok = 0;
       b.disabled = true;
@@ -523,7 +549,21 @@ async function adminClick(e) {
         await adminLoad(); admin(); return alert(`Đã thêm ${ok} bài ngữ pháp.`);
       } catch (err) { await adminLoad().catch(() => {}); admin(); return alert(`Đã thêm ${ok}/${rows.length} bài, dừng vì lỗi: ${err.message}`); }
     }
+    case "confirm-import-p": {
+      const gs = adminPendingP.groups, total = adminPendingP.count; adminPendingP = null; let ok = 0;
+      b.disabled = true;
+      try {
+        for (const g of gs) {  // mỗi chủ đề: tạo bộ mới (nếu chưa có) rồi thêm từ
+          b.textContent = `Đang nhập "${g.topic}"…`;
+          let pid = g.packId;
+          if (pid == null) pid = await rpc("admin_save_pack", { p_pin: adminPin, p: { id: null, isPublished: true, title: g.topic, description: "", level: "Sơ cấp", topic: g.topic, coverEmoji: "📘" } });
+          await rpc("admin_import_words", { p_pin: adminPin, p_pack: pid, rows: g.rows }); ok += g.rows.length;
+        }
+        await adminLoad(); admin(); return alert(`Đã thêm ${ok} từ vào ${gs.length} bộ.`);
+      } catch (err) { await adminLoad().catch(() => {}); admin(); return alert(`Đã thêm ${ok}/${total} từ, dừng vì lỗi: ${err.message}`); }
+    }
     case "tpl-gram": return download("mau-ngu-phap.csv", "\ufeffsep=,\n" + ["Cấp độ,Chủ đề,Cấu trúc,Tên bài,Ý nghĩa / cách dùng,Ví dụ Hàn,Dịch ví dụ", "Sơ cấp,Câu cơ bản,N + 은/는,Trợ từ chủ đề,Nêu chủ đề hoặc đối chiếu trong câu,저는 학생이에요.,Tôi là học sinh.", "Sơ cấp,Câu cơ bản,N + 이/가,Trợ từ chủ ngữ,Đánh dấu chủ ngữ của câu,비가 와요.,Trời mưa."].join("\n"), "text/csv");
+    case "tpl-pack": return download("mau-bo-tu.csv", "\ufeffsep=,\n" + ["Chủ đề,Tiếng Hàn,Tiếng Việt", "Chào hỏi,안녕하세요,Xin chào", "Chào hỏi,감사합니다,Cảm ơn", "Đồ ăn,김치,Kim chi"].join("\n"), "text/csv");
     case "confirm-import": {
       const rows = adminPending.rows; adminPending = null;
       await call("admin_import_words", { p_pack: adminPackId, rows });
@@ -583,6 +623,7 @@ async function adminSubmit(e) {
   }
   if (kind === "csv") return stage(textRows(String(d.csv)));
   if (kind === "gcsv") return stageGrammar(textRows(String(d.gcsv)));
+  if (kind === "pcsv") return stagePacks(textRows(String(d.pcsv)));
   if (kind === "pin") {
     try { await rpc("admin_change_pin", { p_pin: adminPin, p_new: t(d.pin) }); adminPin = t(d.pin); alert("Đã đổi mã quản trị."); }
     catch (err) { alert(err.message); }
@@ -602,6 +643,7 @@ function admin() {
   main.onchange = async ev => {
     if (ev.target.id === "imp-words") return pickWords(ev.target.files[0]);
     if (ev.target.id === "imp-gram") return pickWords(ev.target.files[0], stageGrammar);
+    if (ev.target.id === "imp-packs") return pickWords(ev.target.files[0], stagePacks);
     if (ev.target.id !== "imp-content") return;
     try {
       const d = JSON.parse(await ev.target.files[0].text());
