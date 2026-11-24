@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hangul — Học tiếng Hàn</title>
+<meta name="theme-color" content="#c94f6d">
+<style>
+:root{--bg:#f6efe9;--surface:#fffaf6;--fg:#2b2528;--muted:#7a6f74;--primary:#c94f6d;--primary-fg:#fff;--border:#e6d8d0;--ok:#2e9e5b;--r:16px}
+@media(prefers-color-scheme:dark){:root{--bg:#17131a;--surface:#221c26;--fg:#f1e9ee;--muted:#a89ca3;--border:#392f3e}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI","Noto Sans KR","Malgun Gothic",sans-serif}
+a{color:inherit;text-decoration:none}h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.15;margin:.2em 0}h2{margin:.2em 0}h3{margin:.3em 0}
+.shell{min-height:100vh;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:20px;padding:12px max(20px,calc((100% - 1100px)/2));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.2rem}
+.mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--primary);color:var(--primary-fg)}
+.nav{display:flex;gap:4px;flex:1}.nav a,.bottom-nav a{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;color:var(--muted)}
+.nav a.active,.bottom-nav a.active{background:var(--primary);color:var(--primary-fg)}
+.user-pill{color:var(--muted);font-size:.9rem}
+.main{flex:1;width:100%;max-width:1100px;margin:0 auto;padding:32px 20px 60px}
+.footer{text-align:center;color:var(--muted);font-size:.85rem;padding:20px 20px 30px}
+.topbar{padding-top:calc(12px + env(safe-area-inset-top,0px))}
+@media(max-width:760px){.user-pill{display:none}.topbar{flex-wrap:wrap;gap:6px 12px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px}.nav{flex:1 0 100%;order:3}.nav a{flex:1;justify-content:center;padding:8px 4px;font-size:.9rem}}
+.eyebrow{color:var(--primary);font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.lead{color:var(--muted);font-size:1.05rem}
+.hero{display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:center;margin-bottom:40px}
+@media(max-width:760px){.hero{grid-template-columns:1fr}}
+.hero h1 span{color:var(--primary)}
+.hero-note,.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.hangul,.korean{font-family:"Noto Serif KR","Malgun Gothic",serif;font-size:2.6rem;font-weight:700;margin:.2em 0}
+.korean{font-size:clamp(2.4rem,9vw,4rem)}
+.button{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;font:inherit;font-weight:600;padding:10px 18px;border-radius:999px;background:var(--primary);color:var(--primary-fg)}
+.button:hover{filter:brightness(1.08)}.button.secondary{background:transparent;color:var(--primary);border:1.5px solid var(--primary)}
+.button.ghost{background:transparent;color:var(--fg);border:1px solid var(--border)}
+:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.section-head,.toolbar{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:24px 0 16px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.pack-card{display:flex;flex-direction:column;gap:4px}.pack-card .emoji{font-size:2rem}
+.meta{margin-top:auto;display:flex;flex-direction:column;gap:10px;color:var(--muted);font-size:.9rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-block;padding:3px 12px;border-radius:999px;background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);font-size:.82rem;font-weight:600}
+.subnav{display:flex;gap:8px;margin:12px 0 20px}
+.study-card{text-align:center;min-height:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;margin-bottom:16px}
+.meaning{font-size:1.6rem;font-weight:700;color:var(--primary)}
+.study-actions{display:flex;gap:12px;justify-content:center}
+.answer-list{display:grid;gap:10px;margin-top:16px}
+.answer{font:inherit;text-align:left;padding:14px 18px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);color:var(--fg);cursor:pointer}
+.answer:hover{border-color:var(--primary)}
+.empty{text-align:center;padding:40px 20px}.empty h1{font-size:3rem;color:var(--primary)}
+.notice{padding:12px 16px;border-radius:12px;background:color-mix(in srgb,var(--primary) 10%,transparent);color:var(--muted)}
+.chat{display:flex;flex-direction:column;gap:10px;margin:16px 0}
+.bubble{max-width:85%;padding:10px 14px;border-radius:16px;background:var(--surface);border:1px solid var(--border)}
+.bubble.mine{align-self:flex-end;background:var(--primary);color:var(--primary-fg);border-color:transparent}
+.chat-form{display:flex;gap:10px;align-items:end}
+textarea,input:not([type=file]){flex:1;font:inherit;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--fg)}
+textarea{min-height:56px;resize:vertical}
+.grammar-item p{margin:.4em 0}
+.field{display:grid;gap:4px;margin-bottom:12px;font-size:.9rem;color:var(--muted)}.field input,.field textarea{width:100%}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border)}
+.button.sm{padding:5px 12px;font-size:.85rem}.danger{color:#d64545!important}
+summary{cursor:pointer;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:left}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding-bottom:env(safe-area-inset-bottom)}
+.mark.big{width:104px;height:104px;font-size:3.4rem;border-radius:30px;box-shadow:0 12px 30px color-mix(in srgb,var(--primary) 35%,transparent)}.splash-name{font-size:2.4rem;font-weight:800}
+.opt{position:relative}.opt input{position:absolute;opacity:0;width:0;height:0;flex:none;padding:0;border:0}.opt span{display:inline-block;padding:8px 14px;border-radius:999px;border:1.5px solid var(--border);cursor:pointer;background:var(--surface)}
+.opt input:checked+span{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}.opt input:focus-visible+span{outline:3px solid var(--primary);outline-offset:2px}
+.qgroup{margin:18px 0 8px}.bar{height:6px;border-radius:9px;background:var(--border);overflow:hidden;margin-bottom:16px}.bar i{display:block;height:100%;background:var(--primary)}
+.answer.sel{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,var(--surface))}
+.answer.right,.slot.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,var(--surface))}.answer.wrong,.slot.wrong{border-color:#d64545;background:color-mix(in srgb,#d64545 12%,var(--surface))}
+.tok{font:inherit;padding:8px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--fg);cursor:pointer}
+.slot{min-height:58px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border:2px dashed var(--border);border-radius:var(--r);margin:16px 0}
+.fb{margin:14px 0;padding:12px 16px;border-radius:12px}.fb.right{background:color-mix(in srgb,var(--ok) 15%,transparent)}.fb.wrong{background:color-mix(in srgb,#d64545 12%,transparent)}
+.review{margin-bottom:10px}.review.right{border-left:4px solid var(--ok)}.review.wrong{border-left:4px solid #d64545}.review p{margin:.3em 0}
+.splash{gap:0}.splash-head{display:flex;flex-direction:column;align-items:center;gap:12px}
+.mark.big{width:80px;height:80px;font-size:2.6rem;border-radius:24px}.splash-name{font-size:2rem}
+.app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:100%;max-width:460px;padding:0 16px;margin-top:36px}
+.app-icon{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.app-tile{width:100%;max-width:76px;aspect-ratio:1;border-radius:22%;display:grid;place-items:center;color:#fff;font-size:1.8rem;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.18);transition:transform .15s}
+.app-icon:hover .app-tile,.app-icon:focus-visible .app-tile{transform:scale(1.06)}.app-label{font-size:.8rem;text-align:center;white-space:nowrap}
+.exit-btn{display:flex;align-items:center;gap:6px;margin-left:auto;padding:7px 12px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:.9rem;white-space:nowrap}
+.exit-btn:hover{color:var(--primary);border-color:var(--primary)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+// Hangul – 1 web duy nhất + Firebase (Firestore + Authentication), hash routing.
+// Nội dung học lưu trên Firestore; tiến độ học lưu ở localStorage của trình duyệt.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, setPersistence, inMemoryPersistence, signInWithEmailAndPassword, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+// ---------- Firebase (Project settings → General → Your apps → Web app → firebaseConfig) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyAAqU3KQiETVncmsjXKvo9ujNe4gV6m_Zc",
+  authDomain: "hoctap-e086c.firebaseapp.com",
+  projectId: "hoctap-e086c",
+  appId: "1:511133690110:web:d550abd3c6e3f2e3985daf",
+};
+const ADMIN_EMAIL = "nguyenduy27529@gmail.com";  // tài khoản quản trị tạo trong Authentication; "mã quản trị" chính là mật khẩu của nó
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp), auth = getAuth(fbApp);
+const authReady = setPersistence(auth, inMemoryPersistence);  // không lưu phiên đăng nhập quản trị sau khi đóng trang
+const PACKS = [], GRAMMAR = [];
+let loadError = false, loadErrorMsg = "";
+
+let lastId = 0;  // id số tăng dần (route #/lesson/<id> cần id dạng số)
+const newId = () => (lastId = Math.max(lastId + 1, Date.now() * 100));
+const fromDoc = d => ({ words: [], ...d.data(), id: Number(d.id) });
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id;
+const fill = (packs, grammar) => { PACKS.splice(0, PACKS.length, ...[...packs].sort(byOrder)); GRAMMAR.splice(0, GRAMMAR.length, ...[...grammar].sort(byOrder)); };
+const CACHE_KEY = "hangul.content.cache.fb";
+async function loadPublic() {
+  try {
+    if (auth.currentUser) await signOut(auth);
+    signedPin = null;
+    const [p, g] = await Promise.all([getDocs(query(collection(db, "packs"), where("isPublished", "==", true))), getDocs(collection(db, "grammar"))]);
+    const P = p.docs.map(fromDoc), G = g.docs.map(fromDoc);
+    fill(P, G); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ P, G })); } catch {}
+    return true;
+  } catch (e) {
+    loadErrorMsg = e?.message || String(e);
+    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); fill(c.P, c.G); } catch {}
+    return false;
+  }
+}
+
+// ---------- Lớp tương thích: giữ nguyên tên rpc("admin_*") để phần quản trị phía dưới không phải sửa ----------
+let signedPin = null;
+async function adminSignIn(pin) {
+  if (signedPin === pin && auth.currentUser) return;
+  await authReady;
+  try { await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pin); signedPin = pin; }
+  catch (e) {
+    signedPin = null; const c = String(e.code || "");
+    throw new Error(/too-many/.test(c) ? "Nhập sai quá nhiều lần. Thử lại sau ít phút." : /invalid-credential|wrong-password|user-not-found|invalid-email|missing-password/.test(c) ? "Sai mã quản trị." : e.message);
+  }
+}
+const commitAll = async ops => { for (let i = 0; i < ops.length; i += 400) { const b = writeBatch(db); ops.slice(i, i + 400).forEach(f => f(b)); await b.commit(); } };
+const putWords = async (ref, words) => {
+  if (new Blob([JSON.stringify(words)]).size > 900000) throw new Error("Bộ từ quá lớn (gần 1 MB). Hãy tách thành 2 bộ.");
+  await setDoc(ref, { words }, { merge: true });
+};
+const cleanWord = r => ({ korean: r.korean, romanization: r.romanization ?? "", meaningVi: r.meaningVi, exampleKo: r.exampleKo ?? "", exampleVi: r.exampleVi ?? "" });
+const packFields = p => ({ title: p.title, description: p.description ?? "", level: p.level ?? "", topic: p.topic ?? "", coverEmoji: p.coverEmoji || "📘", isPublished: p.isPublished !== false });
+const gramFields = p => ({ level: p.level ?? "", topic: p.topic ?? "", structure: p.structure, title: p.title, meaning: p.meaning ?? "", exampleKo: p.exampleKo ?? "", exampleVi: p.exampleVi ?? "" });
+
+async function rpc(fn, a) {
+  await adminSignIn(a.p_pin);
+  const pref = id => doc(db, "packs", String(id));
+  switch (fn) {
+    case "admin_list": {
+      const [p, g] = await Promise.all([getDocs(collection(db, "packs")), getDocs(collection(db, "grammar"))]);
+      return { packs: p.docs.map(fromDoc), grammar: g.docs.map(fromDoc) };
+    }
+    case "admin_save_pack": {
+      const p = a.p, id = p.id ?? newId();
+      await setDoc(pref(id), p.id ? packFields(p) : { ...packFields(p), words: [], order: newId() }, { merge: true });
+      return id;
+    }
+    case "admin_save_word": {
+      const p = a.p, ref = pref(p.packId), s = await getDoc(ref);
+      if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
+      const words = [...(s.data().words || [])], k = p.id == null ? -1 : words.findIndex(x => x.id === p.id);
+      if (k >= 0) words[k] = { id: p.id, ...cleanWord(p) }; else words.push({ id: newId(), ...cleanWord(p) });
+      await putWords(ref, words); return words[k >= 0 ? k : words.length - 1].id;
+    }
+    case "admin_import_words": {
+      const ref = pref(a.p_pack), s = await getDoc(ref);
+      if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
+      await putWords(ref, [...(s.data().words || []), ...a.rows.map(r => ({ id: newId(), ...cleanWord(r) }))]); return;
+    }
+    case "admin_save_grammar": {
+      const p = a.p, id = p.id ?? newId();
+      await setDoc(doc(db, "grammar", String(id)), p.id ? gramFields(p) : { ...gramFields(p), order: newId() }, { merge: true });
+      return id;
+    }
+    case "admin_delete": {
+      if (a.p_table === "words") {
+        const pk = PACKS.find(p => p.words.some(w => w.id === a.p_id)); if (!pk) return;
+        const ref = pref(pk.id), s = await getDoc(ref);
+        return setDoc(ref, { words: (s.data().words || []).filter(w => w.id !== a.p_id) }, { merge: true });
+      }
+      return deleteDoc(doc(db, a.p_table, String(a.p_id)));
+    }
+    case "admin_reorder": return commitAll(a.p_ids.map((id, i) => b => b.update(doc(db, a.p_table, String(id)), { order: i + 1 })));
+    case "admin_replace_all": {
+      const [op, og] = await Promise.all([getDocs(collection(db, "packs")), getDocs(collection(db, "grammar"))]);
+      const ops = [...op.docs, ...og.docs].map(d => b => b.delete(d.ref));
+      a.p_data.packs.forEach((p, i) => { const ref = pref(newId()), data = { ...packFields(p), words: (p.words || []).map(w => ({ id: newId(), ...cleanWord(w) })), order: i + 1 }; ops.push(b => b.set(ref, data)); });
+      (a.p_data.grammar || []).forEach((g, i) => { const ref = doc(db, "grammar", String(newId())), data = { ...gramFields(g), order: i + 1 }; ops.push(b => b.set(ref, data)); });
+      return commitAll(ops);
+    }
+    case "admin_change_pin": await updatePassword(auth.currentUser, a.p_new); signedPin = a.p_new; return;
+  }
+  throw new Error("Chức năng không tồn tại: " + fn);
+}
+
+
+
+// ---------- Lưu trữ local ----------
+const STORE_KEY = "hangul.local.v1";
+const defaults = () => ({ user: null, progress: {}, sessions: [], chat: [] });
+function load() {
+  try { return { ...defaults(), ...JSON.parse(localStorage.getItem(STORE_KEY) || "{}") }; }
+  catch { return defaults(); }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ user: state.user, progress: state.progress, sessions: state.sessions })); } catch {}
+}
+const state = load();
+const visible = () => PACKS.filter(p => p.isPublished !== false);
+
+// ---------- Trạng thái giao diện ----------
+const app = document.querySelector("#app");
+let currentPack = null, cardIndex = 0, revealed = false;
+let qcfg = { type: "mc", dir: "ko-vi", mode: "chill", n: 10 }, qz = null;
+const path = () => location.hash.slice(1) || "/";
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const link = (href, title, icon) => `<a href="#${href}" data-route class="${path() === href ? "active" : ""}"><b>${icon}</b><span>${title}</span></a>`;
+const shuffle = a => a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map(x => x[1]);
+
+function shell(content) {
+  const nav = `<nav class="nav">${link("/vocabulary", "Từ vựng", "가")}${link("/grammar", "Ngữ pháp", "文")}${link("/tutor", "Gia sư", "✦")}${link("/profile", "Tôi", "◉")}</nav>`;
+  app.innerHTML = `<div class="shell"><header class="topbar"><a href="#/vocabulary" data-route class="brand"><span class="mark">ㅎ</span>Hangul</a>${nav}<span class="user-pill">${state.user ? `Xin chào, ${esc(state.user.name)}` : "Học một chút, nhớ lâu hơn"}</span><a href="./index.html" class="exit-btn" aria-label="Về Home">⌂ <span>Home</span></a></header><main id="main" class="main">${loadError ? `<div class="notice" style="margin-bottom:16px">Không kết nối được Firebase — đang dùng dữ liệu đã lưu trên máy (nếu có). Lý do: <b>${esc(loadErrorMsg)}</b></div>` : ""}${content}</main><footer class="footer">Hangul · Học tiếng Hàn từng ngày, theo nhịp của bạn. · <a href="#/admin">Quản trị</a></footer></div>`;
+}
+
+const packCards = items => items.map(p => `<article class="card pack-card"><span class="emoji">${esc(p.coverEmoji)}</span><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><div class="meta"><span>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</span><span class="row"><a class="button secondary" href="#/lesson/${p.id}" data-route>Học →</a><a class="button ghost" href="#/quiz/${p.id}" data-route>Kiểm tra</a></span></div></article>`).join("");
+
+// ---------- Trang ----------
+function splash() {  // màn hình chờ: menu app (4 cột/hàng). Thêm app mới bằng cách thêm 1 dòng vào APPS.
+  const APPS = [["/vocabulary", "Hangul", "ㅎ", "#c94f6d"]];
+  app.innerHTML = `<div class="splash"><nav class="app-grid" style="margin-top:0" aria-label="Menu ứng dụng">${APPS.map(([h, l, g, c]) => `<a href="#${h}" data-route class="app-icon"><span class="app-tile" style="background:${c}" aria-hidden="true">${g}</span><span class="app-label">${l}</span></a>`).join("")}</nav></div>`;
+}
+
+function vocabulary() {
+  shell(`<div class="eyebrow">Thư viện học tập</div><h1>Từ vựng</h1><p class="lead">Chọn một bộ từ để học theo chủ đề.</p><div class="subnav"><span class="chip">${visible().length} bộ từ</span><span class="chip">Dữ liệu offline</span></div><div class="grid">${packCards(visible())}</div>`);
+}
+
+function grammarPage() {
+  shell(`<div class="eyebrow">Ngữ pháp Hàn Quốc</div><h1>Cấu trúc rõ ràng, ví dụ gần gũi.</h1><p class="lead">Đọc cách dùng và xem ví dụ Hàn–Việt.</p><div class="grid">${GRAMMAR.map(g => `<article class="card grammar-item"><div><span class="chip">${esc(g.level)} · ${esc(g.topic)}</span><h3>${esc(g.structure)}</h3><strong>${esc(g.title)}</strong><p>${esc(g.meaning)}</p><p><span lang="ko">${esc(g.exampleKo)}</span><br/>${esc(g.exampleVi)}</p></div></article>`).join("")}</div>`);
+}
+
+function lesson(id) {
+  currentPack = visible().find(p => p.id === id);
+  if (!currentPack) return shell(`<div class="card empty">Không tìm thấy bộ từ. <a href="#/vocabulary" data-route>Quay lại thư viện</a></div>`);
+  if (!currentPack.words.length) return shell(`<div class="card empty">Bộ từ này chưa có từ nào. <a href="#/vocabulary">Quay lại</a></div>`);
+  cardIndex = 0; revealed = false; renderCard();
+}
+
+function renderCard() {
+  const word = currentPack.words[cardIndex];
+  shell(`<div class="toolbar"><a href="#/vocabulary" data-route class="button ghost">← Thư viện</a><span class="chip">${esc(currentPack.title)} · ${cardIndex + 1}/${currentPack.words.length}</span></div><div class="card study-card" id="flip" role="button" tabindex="0" aria-label="Lật thẻ từ"><div class="eyebrow">${revealed ? "Nghĩa tiếng Việt" : "Tiếng Hàn · chạm để lật"}</div><div class="korean" lang="ko">${esc(word.korean)}</div>${revealed ? `<div class="meaning">${esc(word.meaningVi)}</div><p class="lead">${esc(word.romanization)}</p>${word.exampleKo ? `<p lang="ko">${esc(word.exampleKo)}</p><p>${esc(word.exampleVi)}</p>` : ""}` : `<p class="lead">${esc(word.romanization)}</p>`}</div><div class="study-actions">${revealed ? `<button class="button secondary" data-remember="false">Chưa nhớ</button><button class="button" data-remember="true">Đã nhớ</button>` : `<button class="button" id="reveal">Xem nghĩa →</button>`}</div>`);
+  const flip = () => { revealed = !revealed; renderCard(); };
+  document.querySelector("#flip").onclick = flip;
+  document.querySelector("#flip").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } };
+  document.querySelector("#reveal")?.addEventListener("click", () => { revealed = true; renderCard(); });
+  document.querySelectorAll("[data-remember]").forEach(b => b.onclick = () => {
+    const prev = state.progress[word.id] || { seen: 0 };
+    state.progress[word.id] = { seen: prev.seen + 1, remembered: b.dataset.remember === "true" };
+    save();
+    cardIndex = (cardIndex + 1) % currentPack.words.length;
+    revealed = false; renderCard();
+  });
+}
+
+function quiz(id) {
+  currentPack = visible().find(p => p.id === id);
+  if (!currentPack) return shell(`<div class="card empty">Không tìm thấy bài kiểm tra.</div>`);
+  if (!currentPack.words.length) return shell(`<div class="card empty">Bộ từ này chưa có từ nào. <a href="#/vocabulary">Quay lại</a></div>`);
+  qz = null; quizSetup();
+}
+const opt = (name, val, label) => `<label class="opt"><input type="radio" name="${name}" value="${val}" ${String(qcfg[name]) === String(val) ? "checked" : ""}><span>${label}</span></label>`;
+function quizSetup() {
+  shell(`<div class="toolbar"><a class="button ghost" href="#/vocabulary" data-route>← Thư viện</a><span class="chip">${esc(currentPack.title)} · ${currentPack.words.length} từ</span></div><h1>Làm bài kiểm tra</h1><form id="qform" class="card">
+<div class="eyebrow">Dạng câu hỏi</div><div class="row qgroup">${opt("type", "mc", "Trắc nghiệm 4 đáp án")}${opt("type", "fill", "Điền từ")}${opt("type", "order", "Sắp xếp")}${opt("type", "mix", "Tổng hợp")}</div>
+<div class="eyebrow">Hướng dịch <small>(Sắp xếp luôn là Việt → Hàn)</small></div><div class="row qgroup">${opt("dir", "ko-vi", "Hàn → Việt")}${opt("dir", "vi-ko", "Việt → Hàn")}${opt("dir", "mix", "Trộn cả hai")}</div>
+<div class="eyebrow">Số câu</div><div class="row qgroup">${opt("n", 5, "5")}${opt("n", 10, "10")}${opt("n", 20, "20")}${opt("n", 0, "Tất cả")}</div>
+<div class="eyebrow">Chế độ</div><div class="row qgroup">${opt("mode", "chill", "😌 Chill")}${opt("mode", "hard", "🔥 Try hard")}</div>
+<p class="notice"><b>Chill:</b> bấm Nộp là thấy đáp án ngay, tổng hợp lại cuối bài.<br><b>Try hard:</b> chỉ hiện đáp án khi kết thúc bài, có thể quay lại sửa câu trước.</p>
+<button class="button" style="margin-top:16px">Bắt đầu →</button></form>`);
+  document.querySelector("#qform").onsubmit = e => {
+    e.preventDefault(); const d = new FormData(e.currentTarget);
+    qcfg = { type: d.get("type"), dir: d.get("dir"), mode: d.get("mode"), n: +d.get("n") }; quizStart();
+  };
+}
+function buildQuiz(c) {
+  const ws = currentPack.words, n = c.n ? Math.min(c.n, ws.length) : ws.length;
+  return shuffle(ws).slice(0, n).map(w => {
+    let type = c.type === "mix" ? ["mc", "fill", "order"][Math.floor(Math.random() * 3)] : c.type, tokens, sent;
+    const toKo = c.dir === "vi-ko" || (c.dir === "mix" && Math.random() < .5);
+    if (type === "order") {
+      sent = !!w.exampleKo && w.exampleKo.trim().split(/\s+/).length > 1;
+      tokens = sent ? w.exampleKo.trim().split(/\s+/) : [...w.korean.replace(/\s/g, "")];
+      if (tokens.length < 2) type = "mc";
+    }
+    const q = { w, type, toKo, prompt: toKo ? w.meaningVi : w.korean, answer: toKo ? w.korean : w.meaningVi };
+    if (type === "order") {
+      Object.assign(q, { toKo: true, tokens, joiner: sent ? " " : "", prompt: sent ? (w.exampleVi || w.meaningVi) : w.meaningVi });
+      q.answer = tokens.join(q.joiner); q.order = tokens.map((_, k) => k);
+      for (let t = 0; t < 5; t++) { q.order = shuffle(q.order); if (q.order.some((k, j) => k !== j)) break; }
+    } else if (type === "mc") {
+      const seen = new Set([q.answer]);
+      const wrong = shuffle(ws).map(x => toKo ? x.korean : x.meaningVi).filter(t => t && !seen.has(t) && seen.add(t)).slice(0, 3);
+      if (!wrong.length) q.type = "fill"; else q.choices = shuffle([q.answer, ...wrong]);
+    }
+    return q;
+  });
+}
+const has = a => Array.isArray(a) ? a.length > 0 : !!String(a ?? "").trim();
+const norm = t => String(t ?? "").normalize("NFC").toLowerCase().replace(/[.,!?;:"'“”’()\[\]]/g, "").replace(/\s+/g, " ").trim();
+const shown = (q, a) => q.type === "order" ? (a || []).map(k => q.tokens[k]).join(q.joiner) : (a || "");
+const rightOf = (q, a) => q.type === "order" ? shown(q, a) === q.answer : q.type === "mc" ? a === q.answer
+  : !!a && [q.answer, ...q.answer.split(/[;,\/]/)].some(x => norm(x) && norm(x) === norm(a));
+const TYPE_LABEL = { mc: "Trắc nghiệm", fill: "Điền từ", order: "Sắp xếp" };
+function quizStart() { qz = { qs: buildQuiz(qcfg), mode: qcfg.mode, i: 0, ans: [], locked: [] }; renderQ(); }
+function renderQ() {
+  const { qs, i, mode } = qz, q = qs[i], a = qz.ans[i], locked = !!qz.locked[i], chill = mode === "chill", last = i === qs.length - 1, ok = locked && rightOf(q, a);
+  const eyebrow = q.type === "order" ? "Sắp xếp thành đáp án đúng" : q.type === "fill" ? (q.toKo ? "Điền từ tiếng Hàn" : "Điền nghĩa tiếng Việt") : (q.toKo ? "Chọn từ tiếng Hàn đúng" : "Chọn nghĩa đúng");
+  let body = "";
+  if (q.type === "mc") body = `<div class="answer-list">${q.choices.map(c => `<button class="answer${a === c ? " sel" : ""}${locked && c === q.answer ? " right" : ""}${locked && a === c && c !== q.answer ? " wrong" : ""}" data-pick="${esc(c)}" ${locked ? "disabled" : ""} lang="${q.toKo ? "ko" : "vi"}">${esc(c)}</button>`).join("")}</div>`;
+  else if (q.type === "fill") body = `<div style="margin-top:16px"><input id="fill" style="width:100%" autocomplete="off" autocapitalize="off" spellcheck="false" lang="${q.toKo ? "ko" : "vi"}" value="${esc(a || "")}" placeholder="Nhập đáp án…" ${locked ? "disabled" : ""}></div>`;
+  else { const used = new Set(a || []);
+    body = `<div class="slot${locked ? (ok ? " right" : " wrong") : ""}">${(a || []).map(k => `<button class="tok" data-un="${k}" ${locked ? "disabled" : ""} lang="ko">${esc(q.tokens[k])}</button>`).join("") || `<small style="color:var(--muted)">Chạm các mảnh bên dưới để ghép</small>`}</div><div class="row">${q.order.map(k => used.has(k) ? "" : `<button class="tok" data-tk="${k}" ${locked ? "disabled" : ""} lang="ko">${esc(q.tokens[k])}</button>`).join("")}</div>`; }
+  const fb = locked ? `<div class="fb ${ok ? "right" : "wrong"}">${ok ? "✓ Chính xác!" : `✗ Chưa đúng. Đáp án: <b lang="${q.toKo ? "ko" : "vi"}">${esc(q.answer)}</b>`}${q.w.romanization ? ` <small>(${esc(q.w.romanization)})</small>` : ""}</div>` : "";
+  const nav = chill ? (locked ? `<button class="button" id="next">${last ? "Xem kết quả" : "Câu tiếp →"}</button>` : `<button class="button" id="submit" ${has(a) ? "" : "disabled"}>Nộp</button>`)
+    : `${i > 0 ? `<button class="button ghost" id="prev">← Trước</button>` : ""}<button class="button" id="next">${last ? "Nộp bài" : "Câu tiếp →"}</button>`;
+  shell(`<div class="toolbar"><button class="button ghost" id="exit">✕ Thoát</button><span class="chip">${chill ? "😌 Chill" : "🔥 Try hard"} · Câu ${i + 1}/${qs.length}</span></div><div class="bar"><i style="width:${i / qs.length * 100}%"></i></div><div class="card" style="text-align:center"><div class="eyebrow">${eyebrow}</div>${q.toKo ? `<div class="meaning">${esc(q.prompt)}</div>` : `<div class="korean" lang="ko">${esc(q.prompt)}</div>`}</div>${body}${fb}<div class="study-actions" style="margin-top:16px">${nav}</div>`);
+  const R = document.querySelector("#main");
+  R.querySelector("#exit").onclick = () => { if (confirm("Thoát bài làm? Kết quả sẽ không được lưu.")) quizSetup(); };
+  R.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { qz.ans[i] = b.dataset.pick; renderQ(); });
+  R.querySelectorAll("[data-tk]").forEach(b => b.onclick = () => { (qz.ans[i] ||= []).push(+b.dataset.tk); renderQ(); });
+  R.querySelectorAll("[data-un]").forEach(b => b.onclick = () => { qz.ans[i] = qz.ans[i].filter(k => k !== +b.dataset.un); renderQ(); });
+  const f = R.querySelector("#fill");
+  if (f) {
+    f.oninput = () => { qz.ans[i] = f.value; const sb = R.querySelector("#submit"); if (sb) sb.disabled = !f.value.trim(); };
+    f.onkeydown = e => { if (e.key === "Enter") R.querySelector("#submit:not([disabled]), #next")?.click(); };
+    if (!locked) f.focus();
+  }
+  R.querySelector("#submit")?.addEventListener("click", () => { qz.locked[i] = true; renderQ(); });
+  R.querySelector("#prev")?.addEventListener("click", () => { qz.i--; renderQ(); });
+  R.querySelector("#next")?.addEventListener("click", () => last ? finishQuiz() : (qz.i++, renderQ()));
+}
+function finishQuiz() {
+  const { qs, ans } = qz;
+  if (qz.mode === "hard") { const blank = qs.filter((_, k) => !has(ans[k])).length; if (blank && !confirm(`Còn ${blank} câu chưa trả lời. Nộp bài?`)) return; }
+  const res = qs.map((q, k) => rightOf(q, ans[k])), correct = res.filter(Boolean).length, total = qs.length, pct = Math.round(correct / total * 100);
+  state.sessions.push({ packId: currentPack.id, total, correct, wrong: qs.filter((_, k) => !res[k]).map(q => q.w.id), mode: qz.mode, at: Date.now() }); save();
+  shell(`<div class="card empty"><div class="eyebrow">Hoàn thành · ${qz.mode === "hard" ? "🔥 Try hard" : "😌 Chill"}</div><h1>${pct}%</h1><p>Bạn đúng ${correct}/${total} câu.</p><div class="row" style="justify-content:center"><button class="button" id="again">Làm lại</button><button class="button secondary" id="resetup">Đổi cài đặt</button><a class="button ghost" href="#/vocabulary" data-route>Về thư viện</a></div></div><div class="section-head"><h2>Tổng hợp đáp án</h2></div>${qs.map((q, k) => `<div class="card review ${res[k] ? "right" : "wrong"}"><div class="row"><b>${res[k] ? "✓" : "✗"}</b><span class="chip">Câu ${k + 1} · ${TYPE_LABEL[q.type]}</span></div><p lang="${q.toKo ? "vi" : "ko"}"><b>${esc(q.prompt)}</b></p>${res[k] ? `<p lang="${q.toKo ? "ko" : "vi"}">${esc(shown(q, ans[k]))}</p>` : `<p>Bạn trả lời: <s>${esc(shown(q, ans[k]) || "(bỏ trống)")}</s><br>Đáp án: <b lang="${q.toKo ? "ko" : "vi"}">${esc(q.answer)}</b></p>`}</div>`).join("")}`);
+  document.querySelector("#again").onclick = quizStart;
+  document.querySelector("#resetup").onclick = quizSetup;
+}
+
+// Gia sư offline: tra cứu trong từ vựng + ngữ pháp có sẵn, không gọi AI bên ngoài.
+function localTutor(prompt) {
+  const q = prompt.toLowerCase();
+  const words = visible().flatMap(p => p.words).filter(w =>
+    q.includes(w.korean) || q.includes(w.romanization.toLowerCase()) || (w.meaningVi.length > 2 && q.includes(w.meaningVi.toLowerCase())));
+  const gram = GRAMMAR.filter(g => {
+    const marks = g.structure.replace(/N \+ |V\/A \+ /, "").split("/");
+    return marks.some(m => q.includes(m)) || q.includes(g.title.toLowerCase());
+  });
+  const out = [];
+  if (/은\/는|이\/가|은|는/.test(q) && /(phân biệt|khác)/.test(q))
+    out.push("은/는 nêu chủ đề hoặc đối chiếu (\"còn tôi thì…\"); 이/가 đánh dấu chủ ngữ và nhấn mạnh thông tin mới (\"chính là…\").");
+  gram.forEach(g => out.push(`${g.structure} – ${g.title}: ${g.meaning} Ví dụ: ${g.exampleKo} (${g.exampleVi})`));
+  words.slice(0, 5).forEach(w => out.push(`${w.korean} [${w.romanization}] = ${w.meaningVi}${w.exampleKo ? `. Ví dụ: ${w.exampleKo} (${w.exampleVi})` : ""}`));
+  return out.length ? out.join("\n\n")
+    : "Mình chỉ tra cứu trong dữ liệu offline của ứng dụng. Hãy thử nhập một từ/ngữ pháp có sẵn như 안녕하세요, 은/는, 이/가, 아요/어요.";
+}
+
+function tutor() {
+  shell(`<div class="eyebrow">Gia sư offline</div><h1>Tra cứu nhanh từ & ngữ pháp.</h1><p class="lead">Chạy hoàn toàn trên máy bạn, không gửi dữ liệu đi đâu.</p><div class="chat">${state.chat.map(m => `<div class="bubble ${m.role === "user" ? "mine" : ""}" style="white-space:pre-line">${esc(m.content)}</div>`).join("")}</div><form class="chat-form" id="chat-form"><textarea name="prompt" placeholder="Ví dụ: Phân biệt 은/는 và 이/가" required maxlength="500"></textarea><button class="button">Gửi</button></form>`);
+  document.querySelector("#chat-form").onsubmit = e => {
+    e.preventDefault();
+    const prompt = String(new FormData(e.currentTarget).get("prompt") || "").trim();
+    if (!prompt) return;
+    state.chat.push({ role: "user", content: prompt }, { role: "assistant", content: localTutor(prompt) });
+    state.chat = state.chat.slice(-30); save(); tutor();
+  };
+}
+
+function profile() {
+  const done = Object.values(state.progress), s = state.sessions;
+  const avg = s.length ? Math.round(s.reduce((a, x) => a + x.correct / x.total, 0) / s.length * 100) : 0;
+  shell(`<div class="eyebrow">Hồ sơ học tập</div><h1>Cá nhân</h1><div class="card">${state.user
+    ? `<h2>${esc(state.user.name)}</h2><span class="chip">Hồ sơ local</span><p class="lead">Tiến độ lưu ngay trên trình duyệt này.</p><div class="row"><button class="button secondary" id="export">Xuất tiến độ</button><label class="button ghost">Nhập<input id="import" type="file" accept="application/json" hidden></label><button class="button ghost" id="reset">Xoá dữ liệu</button></div>`
+    : `<h2>Chào mừng bạn đến với Hangul</h2><p class="lead">Nhập tên để lưu tiến độ trên thiết bị này (không cần tài khoản).</p><form id="name-form" class="row"><input name="name" placeholder="Tên của bạn" required maxlength="40"><button class="button">Bắt đầu</button></form>`}</div><div class="section-head"><h2>Tóm tắt tiến độ</h2></div><div class="grid"><div class="card"><div class="eyebrow">Từ đã học</div><h2>${done.length}</h2></div><div class="card"><div class="eyebrow">Đã thuộc</div><h2>${done.filter(x => x.remembered).length}</h2></div><div class="card"><div class="eyebrow">Điểm trung bình</div><h2>${avg}%</h2></div></div>`);
+  document.querySelector("#name-form")?.addEventListener("submit", e => {
+    e.preventDefault();
+    state.user = { name: String(new FormData(e.currentTarget).get("name")).trim() }; save(); profile();
+  });
+  document.querySelector("#export")?.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ user: state.user, progress: state.progress, sessions: state.sessions })], { type: "application/json" }));
+    a.download = "hangul-progress.json"; a.click(); URL.revokeObjectURL(a.href);
+  });
+  document.querySelector("#import")?.addEventListener("change", async e => {
+    try { const d = JSON.parse(await e.target.files[0].text()); Object.assign(state, { user: d.user ?? null, progress: d.progress ?? {}, sessions: d.sessions ?? [] }); save(); profile(); } catch { alert("File không hợp lệ."); }
+  });
+  document.querySelector("#reset")?.addEventListener("click", () => {
+    if (confirm("Xoá toàn bộ tiến độ và hồ sơ?")) { Object.assign(state, defaults()); save(); renderPage(); }
+  });
+}
+
+// ---------- Quản trị (mã = mật khẩu tài khoản admin trên Firebase Authentication) ----------
+let adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null, adminPending = null, adminPendingG = null, adminPendingP = null;
+const adminLoad = async () => { const d = await rpc("admin_list", { p_pin: adminPin }); fill(d.packs, d.grammar); };
+const call = async (fn, args) => {
+  try { const r = await rpc(fn, { p_pin: adminPin, ...args }); await adminLoad(); admin(); return r; }
+  catch (e) { alert(e.message); admin(); }
+};
+const strip = ({ words, ...rest }) => rest;
+const download = (name, text, type = "application/json") => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+};
+const csvCell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+function parseCsvLine(l, d = ",\t") {
+  const out = []; let cur = "", q = false;
+  for (let i = 0; i < l.length; i++) {
+    const c = l[i];
+    if (q) { if (c === '"' && l[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true;
+    else if (d.includes(c)) { out.push(cur.trim()); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur.trim()); return out;
+}
+const fld = (name, label, val = "", o = {}) => `<label class="field"><span>${label}</span>${o.area
+  ? `<textarea name="${name}" rows="3" ${o.req ? "required" : ""}>${esc(val)}</textarea>`
+  : `<input name="${name}" value="${esc(val)}" ${o.req ? "required" : ""}>`}</label>`;
+const btn = (act, label, attrs = "", cls = "") => `<button type="button" class="button sm ${cls}" data-act="${act}" ${attrs}>${label}</button>`;
+
+function adminGate() {
+  shell(`<div class="eyebrow">Quản trị</div><h1>Đăng nhập quản trị</h1><div class="card"><form id="gate" class="row"><input type="password" name="pin" placeholder="Mã quản trị" required autocomplete="current-password"><button class="button">Mở khoá</button></form></div><p class="notice">Mã được kiểm tra bởi Firebase Authentication, nên người dùng khác không thể sửa dữ liệu nếu không biết mã.</p>`);
+  document.querySelector("#gate").onsubmit = async e => {
+    e.preventDefault(); adminPin = String(new FormData(e.currentTarget).get("pin"));
+    try { await adminLoad(); admin(); } catch (err) { adminPin = null; alert(err.message); }
+  };
+}
+
+function adminPacks() {
+  return `<div class="section-head"><h2>Bộ từ (${PACKS.length})</h2>${btn("new-pack", "+ Thêm bộ")}</div>` +
+    (PACKS.map((p, i) => `<div class="item"><div><strong>${esc(p.coverEmoji)} ${esc(p.title)}</strong> ${p.isPublished === false ? '<span class="chip">Đã ẩn</span>' : ""}<br><small>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</small></div><div class="row">${btn("words", "Từ vựng", `data-id="${p.id}"`)}${btn("edit-pack", "Sửa", `data-id="${p.id}"`, "secondary")}${btn("toggle-pack", p.isPublished === false ? "Hiện" : "Ẩn", `data-id="${p.id}"`, "ghost")}${btn("dup-pack", "Nhân bản", `data-id="${p.id}"`, "ghost")}${btn("up-pack", "↑", `data-i="${i}"`, "ghost")}${btn("down-pack", "↓", `data-i="${i}"`, "ghost")}${btn("del-pack", "Xoá", `data-id="${p.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Chưa có bộ từ nào.</div>`) +
+    adminPackImportCard();
+}
+
+function adminWords() {
+  const p = PACKS.find(x => x.id === adminPackId);
+  if (!p) { adminPackId = null; return adminPacks(); }
+  return `${btn("back", "← Danh sách bộ", "", "ghost")}<div class="section-head"><h2>${esc(p.title)} · ${p.words.length} từ</h2><div class="row">${btn("new-word", "+ Thêm từ")}${btn("export-csv", "Xuất CSV", `data-id="${p.id}"`, "ghost")}</div></div>` +
+    (p.words.map(w => `<div class="item"><div><strong lang="ko">${esc(w.korean)}</strong> · ${esc(w.romanization)}<br><small>${esc(w.meaningVi)}</small></div><div class="row">${btn("edit-word", "Sửa", `data-id="${w.id}"`, "secondary")}${btn("del-word", "Xoá", `data-id="${w.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Bộ này chưa có từ nào.</div>`) +
+    adminImportCard();
+}
+
+function adminGrammar() {
+  return `<div class="section-head"><h2>Ngữ pháp (${GRAMMAR.length})</h2>${btn("new-gram", "+ Thêm bài")}</div>` +
+    (GRAMMAR.map((g, i) => `<div class="item"><div><strong>${esc(g.structure)}</strong> · ${esc(g.title)}<br><small>${esc(g.level)} · ${esc(g.topic)}</small></div><div class="row">${btn("edit-gram", "Sửa", `data-i="${i}"`, "secondary")}${btn("up-gram", "↑", `data-i="${i}"`, "ghost")}${btn("down-gram", "↓", `data-i="${i}"`, "ghost")}${btn("del-gram", "Xoá", `data-i="${i}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Chưa có bài ngữ pháp nào.</div>`) + adminGrammarImportCard();
+}
+function adminGrammarImportCard() {
+  const p = adminPendingG;
+  const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: sẽ thêm ${p.rows.length} bài${p.dups ? ` (bỏ qua ${p.dups} dòng trùng)` : ""}</h3><div style="overflow-x:auto"><table><tr><th>Cấp độ</th><th>Cấu trúc</th><th>Tên bài</th><th>Ý nghĩa</th><th>Ví dụ</th></tr>${p.rows.slice(0, 8).map(r => `<tr><td>${esc(r.level)}</td><td>${esc(r.structure)}</td><td>${esc(r.title)}</td><td>${esc(r.meaning)}</td><td lang="ko">${esc(r.exampleKo)}</td></tr>`).join("")}</table></div>${p.rows.length > 8 ? `<small>… và ${p.rows.length - 8} dòng nữa</small>` : ""}<div class="row" style="margin-top:12px">${btn("confirm-import-g", `Nhập ${p.rows.length} bài`)}${btn("cancel-import-g", "Huỷ", "", "ghost")}</div></div>` : "";
+  return preview + `<div class="card" style="margin-top:16px"><h3>Thêm nhanh ngữ pháp từ Excel</h3><p class="lead">Mỗi dòng một bài, cột theo thứ tự: <b>Cấp độ | Chủ đề | Cấu trúc | Tên bài | Ý nghĩa / cách dùng | Ví dụ Hàn | Dịch ví dụ</b>. Bắt buộc có <b>Cấu trúc</b> và <b>Tên bài</b>; bỏ trống Cấp độ sẽ mặc định "Sơ cấp". Dòng tiêu đề và dòng trùng sẽ tự bỏ qua.</p><div class="row"><label class="button sm">Chọn file Excel / CSV<input id="imp-gram" type="file" accept=".xlsx,.csv,.tsv,.txt" hidden></label>${btn("tpl-gram", "Tải file mẫu", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="gcsv" style="margin-top:10px"><textarea name="gcsv" rows="6" style="width:100%;margin-bottom:10px" placeholder="Sơ cấp\tCâu cơ bản\tN + 은/는\tTrợ từ chủ đề\tNêu chủ đề của câu\t저는 학생이에요.\tTôi là học sinh." required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
+}
+
+function adminData() {
+  return `<div class="card"><h2>Sao lưu nội dung</h2><p class="lead">Xuất toàn bộ nội dung ra JSON. Nhập JSON sẽ THAY THẾ toàn bộ dữ liệu trên Firebase.</p><div class="row">${btn("export-content", "Xuất JSON")}<label class="button ghost sm">Nhập JSON<input id="imp-content" type="file" accept="application/json" hidden></label></div></div><div class="card" style="margin-top:16px"><h2>Đổi mã quản trị</h2><form data-form="pin" class="row"><input type="password" name="pin" minlength="8" placeholder="Mã mới (≥ 8 ký tự)" required><button class="button sm">Đổi mã</button></form></div>`;
+}
+
+function adminForm() {
+  const e = adminEdit; let title, fields;
+  if (e.k === "pack") {
+    const p = (e.id && PACKS.find(x => x.id === e.id)) || {};
+    title = e.id ? "Sửa bộ từ" : "Thêm bộ từ";
+    fields = fld("title", "Tên bộ", p.title, { req: 1 }) + fld("description", "Mô tả", p.description, { area: 1 }) + fld("level", "Cấp độ", p.level ?? "Sơ cấp") + fld("topic", "Chủ đề", p.topic) + fld("coverEmoji", "Biểu tượng (emoji)", p.coverEmoji ?? "📘");
+  } else if (e.k === "word") {
+    const w = (e.id && PACKS.flatMap(p => p.words).find(x => x.id === e.id)) || {};
+    title = e.id ? "Sửa từ" : "Thêm từ";
+    fields = fld("korean", "Tiếng Hàn", w.korean, { req: 1 }) + fld("romanization", "Phiên âm", w.romanization) + fld("meaningVi", "Nghĩa tiếng Việt", w.meaningVi, { req: 1 }) + fld("exampleKo", "Ví dụ (Hàn)", w.exampleKo) + fld("exampleVi", "Dịch ví dụ", w.exampleVi);
+  } else {
+    const g = (e.i != null && GRAMMAR[e.i]) || {};
+    title = e.i != null ? "Sửa bài ngữ pháp" : "Thêm bài ngữ pháp";
+    fields = fld("level", "Cấp độ", g.level ?? "Sơ cấp") + fld("topic", "Chủ đề", g.topic) + fld("structure", "Cấu trúc (công thức)", g.structure, { req: 1 }) + fld("title", "Tên bài", g.title, { req: 1 }) + fld("meaning", "Ý nghĩa / cách dùng", g.meaning, { area: 1 }) + fld("exampleKo", "Ví dụ (Hàn)", g.exampleKo) + fld("exampleVi", "Dịch ví dụ", g.exampleVi);
+  }
+  return `<div class="card"><h2>${title}</h2><form data-form="${e.k}">${fields}<div class="row"><button class="button">Lưu</button>${btn("cancel", "Huỷ", "", "ghost")}</div></form></div>`;
+}
+
+// ---------- Thêm nhanh từ Excel / CSV / dán trực tiếp (không cần thư viện) ----------
+async function unzip(buf) {  // đọc file .xlsx (zip) bằng DecompressionStream có sẵn của trình duyệt
+  const v = new DataView(buf), u8 = new Uint8Array(buf), out = {};
+  let e = u8.length - 22;
+  while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error("Không phải file .xlsx hợp lệ.");
+  const n = v.getUint16(e + 10, true); let p = v.getUint32(e + 16, true);
+  for (let i = 0; i < n; i++) {
+    const method = v.getUint16(p + 10, true), csize = v.getUint32(p + 20, true), nl = v.getUint16(p + 28, true), xl = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), off = v.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nl));
+    p += 46 + nl + xl + cl;
+    if (!/^xl\/(worksheets\/[^/]+\.xml|sharedStrings\.xml)$/.test(name)) continue;
+    const start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true), data = u8.subarray(start, start + csize);
+    out[name] = method === 0 ? data : new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  }
+  return out;
+}
+const colIndex = ref => [...ref.replace(/\d+/g, "")].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+async function readXlsx(file) {
+  if (typeof DecompressionStream === "undefined") throw new Error("Trình duyệt quá cũ để đọc .xlsx. Hãy lưu file dạng CSV UTF-8.");
+  const z = await unzip(await file.arrayBuffer());
+  const sheet = Object.keys(z).filter(k => k.startsWith("xl/worksheets/")).sort()[0];
+  if (!sheet) throw new Error("Không tìm thấy trang tính trong file.");
+  const xml = b => new DOMParser().parseFromString(new TextDecoder().decode(b), "application/xml");
+  const text = el => [...el.getElementsByTagName("t")].filter(t => t.parentNode.nodeName !== "rPh").map(t => t.textContent).join("");
+  const shared = z["xl/sharedStrings.xml"] ? [...xml(z["xl/sharedStrings.xml"]).getElementsByTagName("si")].map(text) : [];
+  const rows = [];
+  for (const r of xml(z[sheet]).getElementsByTagName("row")) {
+    const row = [];
+    for (const c of r.getElementsByTagName("c")) {
+      const t = c.getAttribute("t"), v = c.getElementsByTagName("v")[0]?.textContent ?? "";
+      row[colIndex(c.getAttribute("r"))] = t === "s" ? shared[+v] : t === "inlineStr" ? text(c) : v;
+    }
+    rows.push([...row].map(x => x ?? ""));
+  }
+  return rows;
+}
+const delimOf = t => {
+  const l = t.split(/\r?\n/).find(x => x.trim() && !/^sep=/i.test(x)) || "";
+  return l.includes("\t") ? "\t" : l.split(";").length > l.split(",").length ? ";" : ",";
+};
+const textRows = t => {
+  t = t.replace(/^\ufeff/, ""); const d = delimOf(t);
+  return t.split(/\r?\n/).filter(l => l.trim() && !/^sep=/i.test(l)).map(l => parseCsvLine(l, d));
+};
+function stage(rows) {  // lọc, bỏ dòng tiêu đề + dòng trùng, rồi cho xem trước
+  const pack = PACKS.find(p => p.id === adminPackId); if (!pack) return;
+  if (rows.length && /^(korean|tiếng hàn|한국어|từ)/i.test(String(rows[0][0]).trim())) rows = rows.slice(1);
+  const have = new Set(pack.words.map(w => w.korean + "|" + w.meaningVi)), seen = new Set(), out = []; let dups = 0;
+  for (const c of rows) {
+    const [korean, romanization, meaningVi, exampleKo, exampleVi] = (c.length === 2 ? [c[0], "", c[1]] : c).map(x => String(x ?? "").trim());
+    if (!korean || !meaningVi) continue;
+    const k = korean + "|" + meaningVi;
+    if (have.has(k) || seen.has(k)) { dups++; continue; }
+    seen.add(k); out.push({ korean, romanization, meaningVi, exampleKo, exampleVi });
+  }
+  if (!out.length) return alert(dups ? "Tất cả các dòng đều đã có trong bộ này." : "Không có dòng hợp lệ (cần ít nhất cột Tiếng Hàn và Nghĩa).");
+  if (out.length > 1000) return alert("Mỗi lần chỉ nhập tối đa 1000 từ. Hãy chia nhỏ file.");
+  adminPending = { rows: out, dups }; admin();
+}
+function stageGrammar(rows) {  // ngữ pháp: Cấp độ | Chủ đề | Cấu trúc | Tên bài | Ý nghĩa | Ví dụ Hàn | Dịch ví dụ
+  if (rows.length && /^(level|cấp độ|cấp|cap do)/i.test(String(rows[0][0]).trim())) rows = rows.slice(1);
+  const key = (a, b) => (a + "|" + b).toLowerCase();
+  const have = new Set(GRAMMAR.map(g => key(g.structure, g.title))), seen = new Set(), out = []; let dups = 0;
+  for (const c of rows) {
+    const [level, topic, structure, title, meaning, exampleKo, exampleVi] = [0, 1, 2, 3, 4, 5, 6].map(i => String(c[i] ?? "").trim());
+    if (!structure || !title) continue;
+    const k = key(structure, title);
+    if (have.has(k) || seen.has(k)) { dups++; continue; }
+    seen.add(k); out.push({ level: level || "Sơ cấp", topic, structure, title, meaning, exampleKo, exampleVi });
+  }
+  if (!out.length) return alert(dups ? "Tất cả các dòng đều đã có trong danh sách ngữ pháp." : "Không có dòng hợp lệ (cần ít nhất cột Cấu trúc và Tên bài).");
+  if (out.length > 300) return alert("Mỗi lần chỉ nhập tối đa 300 bài ngữ pháp. Hãy chia nhỏ file.");
+  adminPendingG = { rows: out, dups }; admin();
+}
+function stagePacks(rows) {  // nhiều bộ từ: Chủ đề | Tiếng Hàn | Tiếng Việt (mỗi chủ đề = 1 bộ từ)
+  if (rows.length && /^(chủ đề|chu de|topic)/i.test(String(rows[0][0]).trim())) rows = rows.slice(1);
+  const groups = new Map(), seen = new Set(); let dups = 0, count = 0;
+  for (const c of rows) {
+    const [topic, korean, meaningVi] = [0, 1, 2].map(i => String(c[i] ?? "").trim());
+    if (!korean || !meaningVi) continue;
+    const t = topic || "Chưa phân loại", key = t.toLowerCase();
+    const existing = PACKS.find(p => p.title.toLowerCase() === key);
+    const k = key + "|" + korean + "|" + meaningVi;
+    if (seen.has(k) || existing?.words.some(w => w.korean === korean && w.meaningVi === meaningVi)) { dups++; continue; }
+    seen.add(k);
+    if (!groups.has(key)) groups.set(key, { topic: t, packId: existing?.id ?? null, rows: [] });
+    groups.get(key).rows.push({ korean, romanization: "", meaningVi, exampleKo: "", exampleVi: "" });
+    count++;
+  }
+  if (!count) return alert(dups ? "Tất cả các dòng đều đã có sẵn." : "Không có dòng hợp lệ (cần đủ cột Chủ đề | Tiếng Hàn | Tiếng Việt).");
+  if (count > 2000) return alert("Mỗi lần chỉ nhập tối đa 2000 từ. Hãy chia nhỏ file.");
+  adminPendingP = { groups: [...groups.values()], count, dups }; admin();
+}
+async function pickWords(file, handler = stage) {
+  if (!file) return;
+  try {
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".xls")) throw new Error("File .xls (Excel cũ) chưa hỗ trợ. Hãy lưu lại dạng .xlsx hoặc CSV UTF-8.");
+    if (name.endsWith(".xlsx")) return handler(await readXlsx(file));
+    const txt = await file.text();
+    if (txt.includes("\ufffd")) throw new Error("File không phải UTF-8. Trong Excel chọn Save As → CSV UTF-8, hoặc dùng .xlsx.");
+    handler(textRows(txt));
+  } catch (e) { alert(e.message || "Không đọc được file."); }
+}
+function adminImportCard() {
+  const p = adminPending;
+  const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: sẽ thêm ${p.rows.length} từ${p.dups ? ` (bỏ qua ${p.dups} dòng trùng)` : ""}</h3><div style="overflow-x:auto"><table><tr><th>Hàn</th><th>Phiên âm</th><th>Nghĩa</th><th>Ví dụ</th></tr>${p.rows.slice(0, 8).map(r => `<tr><td lang="ko">${esc(r.korean)}</td><td>${esc(r.romanization)}</td><td>${esc(r.meaningVi)}</td><td>${esc(r.exampleKo)}</td></tr>`).join("")}</table></div>${p.rows.length > 8 ? `<small>… và ${p.rows.length - 8} dòng nữa</small>` : ""}<div class="row" style="margin-top:12px">${btn("confirm-import", `Nhập ${p.rows.length} từ`)}${btn("cancel-import", "Huỷ", "", "ghost")}</div></div>` : "";
+  return preview + `<div class="card" style="margin-top:16px"><h3>Thêm nhanh từ Excel</h3><p class="lead">Mỗi dòng một từ, cột theo thứ tự: <b>Tiếng Hàn | Phiên âm | Nghĩa | Ví dụ Hàn | Dịch ví dụ</b>. Có thể chỉ dùng 2 cột: <b>Tiếng Hàn | Nghĩa</b>. Dòng tiêu đề và dòng trùng sẽ tự bỏ qua.</p><div class="row"><label class="button sm">Chọn file Excel / CSV<input id="imp-words" type="file" accept=".xlsx,.csv,.tsv,.txt" hidden></label>${btn("tpl", "Tải file mẫu", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="csv" style="margin-top:10px"><textarea name="csv" rows="6" style="width:100%;margin-bottom:10px" placeholder="안녕하세요\tannyeonghaseyo\tXin chào" required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
+}
+function adminPackImportCard() {
+  const p = adminPendingP;
+  const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: ${p.count} từ vào ${p.groups.length} bộ${p.dups ? ` (bỏ qua ${p.dups} dòng trùng)` : ""}</h3><div style="overflow-x:auto"><table><tr><th>Chủ đề (bộ từ)</th><th>Số từ</th><th>Ví dụ</th><th></th></tr>${p.groups.map(g => `<tr><td>${esc(g.topic)}</td><td>${g.rows.length}</td><td><span lang="ko">${esc(g.rows[0].korean)}</span> – ${esc(g.rows[0].meaningVi)}</td><td>${g.packId ? '<span class="chip">Thêm vào bộ có sẵn</span>' : '<span class="chip">Bộ mới</span>'}</td></tr>`).join("")}</table></div><div class="row" style="margin-top:12px">${btn("confirm-import-p", `Nhập ${p.count} từ`)}${btn("cancel-import-p", "Huỷ", "", "ghost")}</div></div>` : "";
+  return preview + `<div class="card" style="margin-top:16px"><h3>Thêm nhanh nhiều bộ từ từ Excel</h3><p class="lead">Mỗi dòng một từ, 3 cột: <b>Chủ đề | Tiếng Hàn | Tiếng Việt</b>. Mỗi chủ đề sẽ thành một bộ từ (trùng tên bộ có sẵn thì thêm vào bộ đó). Dòng tiêu đề và dòng trùng tự bỏ qua.</p><div class="row"><label class="button sm">Chọn file Excel / CSV<input id="imp-packs" type="file" accept=".xlsx,.csv,.tsv,.txt" hidden></label>${btn("tpl-pack", "Tải file mẫu", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="pcsv" style="margin-top:10px"><textarea name="pcsv" rows="6" style="width:100%;margin-bottom:10px" placeholder="Chào hỏi\t안녕하세요\tXin chào" required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
+}
+
+async function adminClick(e) {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act, id = Number(b.dataset.id), i = Number(b.dataset.i);
+  const pack = PACKS.find(p => p.id === id);
+  const moved = (arr, from, to) => { const a = arr.map(x => x.id); if (to < 0 || to >= a.length) return null; a.splice(to, 0, a.splice(from, 1)[0]); return a; };
+  const reorder = (table, arr, from, to) => { const a = moved(arr, from, to); if (a) return call("admin_reorder", { p_table: table, p_ids: a }); };
+  switch (act) {
+    case "tab": adminTab = b.dataset.tab; adminEdit = null; adminPackId = null; adminPending = null; adminPendingG = null; adminPendingP = null; return admin();
+    case "lock": adminPin = null; await loadPublic(); return renderPage();
+    case "cancel": adminEdit = null; return admin();
+    case "cancel-import": adminPending = null; return admin();
+    case "cancel-import-g": adminPendingG = null; return admin();
+    case "cancel-import-p": adminPendingP = null; return admin();
+    case "confirm-import-g": {
+      const rows = adminPendingG.rows; adminPendingG = null; let ok = 0;
+      b.disabled = true;
+      try {
+        for (const r of rows) {  // lần lượt từng bài để giữ đúng thứ tự trong file
+          b.textContent = `Đang nhập ${ok + 1}/${rows.length}…`;
+          await rpc("admin_save_grammar", { p_pin: adminPin, p: { id: null, ...r } }); ok++;
+        }
+        await adminLoad(); admin(); return alert(`Đã thêm ${ok} bài ngữ pháp.`);
+      } catch (err) { await adminLoad().catch(() => {}); admin(); return alert(`Đã thêm ${ok}/${rows.length} bài, dừng vì lỗi: ${err.message}`); }
+    }
+    case "confirm-import-p": {
+      const gs = adminPendingP.groups, total = adminPendingP.count; adminPendingP = null; let ok = 0;
+      b.disabled = true;
+      try {
+        for (const g of gs) {  // mỗi chủ đề: tạo bộ mới (nếu chưa có) rồi thêm từ
+          b.textContent = `Đang nhập "${g.topic}"…`;
+          let pid = g.packId;
+          if (pid == null) pid = await rpc("admin_save_pack", { p_pin: adminPin, p: { id: null, isPublished: true, title: g.topic, description: "", level: "Sơ cấp", topic: g.topic, coverEmoji: "📘" } });
+          await rpc("admin_import_words", { p_pin: adminPin, p_pack: pid, rows: g.rows }); ok += g.rows.length;
+        }
+        await adminLoad(); admin(); return alert(`Đã thêm ${ok} từ vào ${gs.length} bộ.`);
+      } catch (err) { await adminLoad().catch(() => {}); admin(); return alert(`Đã thêm ${ok}/${total} từ, dừng vì lỗi: ${err.message}`); }
+    }
+    case "tpl-gram": return download("mau-ngu-phap.csv", "\ufeffsep=,\n" + ["Cấp độ,Chủ đề,Cấu trúc,Tên bài,Ý nghĩa / cách dùng,Ví dụ Hàn,Dịch ví dụ", "Sơ cấp,Câu cơ bản,N + 은/는,Trợ từ chủ đề,Nêu chủ đề hoặc đối chiếu trong câu,저는 학생이에요.,Tôi là học sinh.", "Sơ cấp,Câu cơ bản,N + 이/가,Trợ từ chủ ngữ,Đánh dấu chủ ngữ của câu,비가 와요.,Trời mưa."].join("\n"), "text/csv");
+    case "tpl-pack": return download("mau-bo-tu.csv", "\ufeffsep=,\n" + ["Chủ đề,Tiếng Hàn,Tiếng Việt", "Chào hỏi,안녕하세요,Xin chào", "Chào hỏi,감사합니다,Cảm ơn", "Đồ ăn,김치,Kim chi"].join("\n"), "text/csv");
+    case "confirm-import": {
+      const rows = adminPending.rows; adminPending = null;
+      await call("admin_import_words", { p_pack: adminPackId, rows });
+      return alert(`Đã thêm ${rows.length} từ.`);
+    }
+    case "tpl": return download("mau-tu-vung.csv", "\ufeffsep=,\n" + ["Tiếng Hàn,Phiên âm,Nghĩa,Ví dụ Hàn,Dịch ví dụ", "안녕하세요,annyeonghaseyo,Xin chào,안녕하세요!,Xin chào!", "감사합니다,gamsahamnida,Cảm ơn,,"].join("\n"), "text/csv");
+    case "back": adminPackId = null; adminPending = null; return admin();
+    case "words": adminPackId = id; adminPending = null; return admin();
+    case "new-pack": adminEdit = { k: "pack", id: null }; return admin();
+    case "edit-pack": adminEdit = { k: "pack", id }; return admin();
+    case "new-word": adminEdit = { k: "word", id: null }; return admin();
+    case "edit-word": adminEdit = { k: "word", id }; return admin();
+    case "new-gram": adminEdit = { k: "gram", i: null }; return admin();
+    case "edit-gram": adminEdit = { k: "gram", i }; return admin();
+    case "export-content": return download("hangul-content.json", JSON.stringify({ packs: PACKS, grammar: GRAMMAR }, null, 2));
+    case "export-csv": return download(`${pack.title}.csv`, "\ufeff" + pack.words.map(w => [w.korean, w.romanization, w.meaningVi, w.exampleKo, w.exampleVi].map(csvCell).join(",")).join("\n"), "text/csv");
+    case "toggle-pack": return call("admin_save_pack", { p: { ...strip(pack), isPublished: pack.isPublished === false } });
+    case "dup-pack":
+      try {
+        const nid = await rpc("admin_save_pack", { p_pin: adminPin, p: { ...strip(pack), id: null, title: pack.title + " (bản sao)" } });
+        await rpc("admin_import_words", { p_pin: adminPin, p_pack: nid, rows: pack.words });
+        await adminLoad(); return admin();
+      } catch (err) { return alert(err.message); }
+    case "up-pack": return reorder("packs", PACKS, i, i - 1);
+    case "down-pack": return reorder("packs", PACKS, i, i + 1);
+    case "up-gram": return reorder("grammar", GRAMMAR, i, i - 1);
+    case "down-gram": return reorder("grammar", GRAMMAR, i, i + 1);
+    case "del-pack":
+      if (!confirm(`Xoá bộ "${pack.title}" và ${pack.words.length} từ trong đó?`)) return;
+      return call("admin_delete", { p_table: "packs", p_id: id });
+    case "del-word": {
+      const w = PACKS.flatMap(p => p.words).find(x => x.id === id);
+      if (!w || !confirm(`Xoá từ "${w.korean}"?`)) return;
+      return call("admin_delete", { p_table: "words", p_id: id });
+    }
+    case "del-gram":
+      if (!confirm(`Xoá bài "${GRAMMAR[i].structure}"?`)) return;
+      return call("admin_delete", { p_table: "grammar", p_id: GRAMMAR[i].id });
+  }
+}
+
+async function adminSubmit(e) {
+  e.preventDefault();
+  const f = e.target, kind = f.dataset.form, d = Object.fromEntries(new FormData(f));
+  const t = s => String(s ?? "").trim();
+  if (kind === "pack") {
+    const old = adminEdit.id && PACKS.find(x => x.id === adminEdit.id); adminEdit = null;
+    return call("admin_save_pack", { p: { id: old?.id ?? null, isPublished: old ? old.isPublished : true, title: t(d.title), description: t(d.description), level: t(d.level), topic: t(d.topic), coverEmoji: t(d.coverEmoji) || "📘" } });
+  }
+  if (kind === "word") {
+    const id = adminEdit.id; adminEdit = null;
+    return call("admin_save_word", { p: { id, packId: adminPackId, korean: t(d.korean), romanization: t(d.romanization), meaningVi: t(d.meaningVi), exampleKo: t(d.exampleKo), exampleVi: t(d.exampleVi) } });
+  }
+  if (kind === "gram") {
+    const g = adminEdit.i != null ? GRAMMAR[adminEdit.i] : null; adminEdit = null;
+    return call("admin_save_grammar", { p: { id: g?.id ?? null, level: t(d.level), topic: t(d.topic), structure: t(d.structure), title: t(d.title), meaning: t(d.meaning), exampleKo: t(d.exampleKo), exampleVi: t(d.exampleVi) } });
+  }
+  if (kind === "csv") return stage(textRows(String(d.csv)));
+  if (kind === "gcsv") return stageGrammar(textRows(String(d.gcsv)));
+  if (kind === "pcsv") return stagePacks(textRows(String(d.pcsv)));
+  if (kind === "pin") {
+    try { await rpc("admin_change_pin", { p_pin: adminPin, p_new: t(d.pin) }); adminPin = t(d.pin); alert("Đã đổi mã quản trị."); }
+    catch (err) { alert(err.message); }
+  }
+}
+
+function admin() {
+  if (adminPin === null) return adminGate();
+  const tabs = [["packs", "Bộ từ"], ["grammar", "Ngữ pháp"], ["data", "Dữ liệu"]];
+  const body = adminEdit ? adminForm()
+    : adminTab === "packs" ? (adminPackId ? adminWords() : adminPacks())
+    : adminTab === "grammar" ? adminGrammar() : adminData();
+  shell(`<div class="eyebrow">Quản trị</div><h1>Nội dung học tập</h1><div class="row">${tabs.map(([k, v]) => btn("tab", v, `data-tab="${k}"`, adminTab === k && !adminEdit ? "" : "ghost")).join("")}${btn("lock", "Khoá", "", "ghost")}</div><div style="margin-top:20px">${body}</div>`);
+  const main = document.querySelector("#main");
+  main.onclick = adminClick;
+  main.onsubmit = adminSubmit;
+  main.onchange = async ev => {
+    if (ev.target.id === "imp-words") return pickWords(ev.target.files[0]);
+    if (ev.target.id === "imp-gram") return pickWords(ev.target.files[0], stageGrammar);
+    if (ev.target.id === "imp-packs") return pickWords(ev.target.files[0], stagePacks);
+    if (ev.target.id !== "imp-content") return;
+    try {
+      const d = JSON.parse(await ev.target.files[0].text());
+      if (!Array.isArray(d.packs) || !Array.isArray(d.grammar) || d.packs.some(p => !Array.isArray(p.words))) throw 0;
+      if (!confirm("Thay thế TOÀN BỘ nội dung trên Firebase bằng file này?")) return;
+      await call("admin_replace_all", { p_data: { packs: d.packs, grammar: d.grammar } });
+    } catch { alert("File nội dung không hợp lệ."); }
+  };
+}
+
+function renderPage() {
+  const p = path();
+  if (p === "/" || p === "/index.html") return vocabulary();
+  if (p === "/vocabulary") return vocabulary();
+  if (p === "/grammar") return grammarPage();
+  if (p === "/tutor") return tutor();
+  if (p === "/profile") return profile();
+  if (p === "/admin") return admin();
+  const m = p.match(/^\/(lesson|quiz)\/(\d+)$/);
+  if (m) return m[1] === "lesson" ? lesson(Number(m[2])) : quiz(Number(m[2]));
+  shell(`<div class="card empty"><h1>Không tìm thấy trang</h1><a class="button" href="#/" data-route>Về trang chủ</a></div>`);
+}
+
+window.addEventListener("hashchange", () => { renderPage(); window.scrollTo(0, 0); });
+(async function init() {
+  shell(`<div class="card empty">Đang tải nội dung…</div>`);
+  loadError = !(await loadPublic());
+  renderPage();
+})();
+
+</script>
+</body>
+</html>
