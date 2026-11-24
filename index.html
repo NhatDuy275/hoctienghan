@@ -85,41 +85,122 @@ table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 10px
 </head>
 <body>
 <div id="app"></div>
-<script>
-// Hangul – 1 web duy nhất + Supabase (hash routing, mở trực tiếp được): không API, không OAuth, không thư viện bên thứ 3.
-// Nội dung học lưu trên Supabase; tiến độ học lưu ở localStorage của trình duyệt.
+<script type="module">
+// Hangul – 1 web duy nhất + Firebase (Firestore + Authentication), hash routing.
+// Nội dung học lưu trên Firestore; tiến độ học lưu ở localStorage của trình duyệt.
 
-// ---------- Supabase (gọi REST trực tiếp, không cần thư viện) ----------
-const SUPABASE_URL = "https://gvzsupanpcayufypjyzk.supabase.co";   // Project Settings → API → Project URL
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2enN1cGFucGNheXVmeXBqeXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNTQzMDgsImV4cCI6MjExMDkzMDMwOH0.5VnqyZMyRhmPcEDFy8lHOcvmhaAT_ASwZWksKlf1c7s";          // khoá "anon public". TUYỆT ĐỐI không dùng service_role.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, setPersistence, inMemoryPersistence, signInWithEmailAndPassword, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+// ---------- Firebase (Project settings → General → Your apps → Web app → firebaseConfig) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyAAqU3KQiETVncmsjXKvo9ujNe4gV6m_Zc",
+  authDomain: "hoctap-e086c.firebaseapp.com",
+  projectId: "hoctap-e086c",
+  appId: "1:511133690110:web:d550abd3c6e3f2e3985daf",
+};
+const ADMIN_EMAIL = "nguyenduy27529@gmail.com";  // tài khoản quản trị tạo trong Authentication; "mã quản trị" chính là mật khẩu của nó
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp), auth = getAuth(fbApp);
+const authReady = setPersistence(auth, inMemoryPersistence);  // không lưu phiên đăng nhập quản trị sau khi đóng trang
 const PACKS = [], GRAMMAR = [];
 let loadError = false, loadErrorMsg = "";
-const sb = async (path, { method = "GET", body } = {}) => {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    method, body: body && JSON.stringify(body),
-    headers: { apikey: SUPABASE_ANON_KEY, ...(SUPABASE_ANON_KEY.startsWith("eyJ") ? { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } : {}), "Content-Type": "application/json" } });
-  const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.message || `Lỗi ${r.status}`);
-  return j;
-};
-const rpc = (fn, args) => sb(`rpc/${fn}`, { method: "POST", body: args });
-const mapWord = w => ({ id: w.id, korean: w.korean, romanization: w.romanization, meaningVi: w.meaning_vi, exampleKo: w.example_ko, exampleVi: w.example_vi });
-const mapPack = p => ({ id: p.id, title: p.title, description: p.description, level: p.level, topic: p.topic, coverEmoji: p.cover_emoji, isPublished: p.is_published,
-  words: [...(p.words || [])].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id).map(mapWord) });
-const mapGram = g => ({ id: g.id, level: g.level, topic: g.topic, structure: g.structure, title: g.title, meaning: g.meaning, exampleKo: g.example_ko, exampleVi: g.example_vi });
-const fill = (packs, grammar) => { PACKS.splice(0, PACKS.length, ...packs.map(mapPack)); GRAMMAR.splice(0, GRAMMAR.length, ...grammar.map(mapGram)); };
-const CACHE_KEY = "hangul.content.cache";
+
+let lastId = 0;  // id số tăng dần (route #/lesson/<id> cần id dạng số)
+const newId = () => (lastId = Math.max(lastId + 1, Date.now() * 100));
+const fromDoc = d => ({ words: [], ...d.data(), id: Number(d.id) });
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id;
+const fill = (packs, grammar) => { PACKS.splice(0, PACKS.length, ...[...packs].sort(byOrder)); GRAMMAR.splice(0, GRAMMAR.length, ...[...grammar].sort(byOrder)); };
+const CACHE_KEY = "hangul.content.cache.fb";
 async function loadPublic() {
   try {
-    const [p, g] = await Promise.all([sb("packs?select=*,words(*)&is_published=eq.true&order=sort_order,id"), sb("grammar?select=*&order=sort_order,id")]);
-    fill(p, g); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ p, g })); } catch {}
+    if (auth.currentUser) await signOut(auth);
+    signedPin = null;
+    const [p, g] = await Promise.all([getDocs(query(collection(db, "packs"), where("isPublished", "==", true))), getDocs(collection(db, "grammar"))]);
+    const P = p.docs.map(fromDoc), G = g.docs.map(fromDoc);
+    fill(P, G); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ P, G })); } catch {}
     return true;
   } catch (e) {
     loadErrorMsg = e?.message || String(e);
-    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); fill(c.p, c.g); } catch {}
+    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); fill(c.P, c.G); } catch {}
     return false;
   }
 }
+
+// ---------- Lớp tương thích: giữ nguyên tên rpc("admin_*") để phần quản trị phía dưới không phải sửa ----------
+let signedPin = null;
+async function adminSignIn(pin) {
+  if (signedPin === pin && auth.currentUser) return;
+  await authReady;
+  try { await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pin); signedPin = pin; }
+  catch (e) {
+    signedPin = null; const c = String(e.code || "");
+    throw new Error(/too-many/.test(c) ? "Nhập sai quá nhiều lần. Thử lại sau ít phút." : /invalid-credential|wrong-password|user-not-found|invalid-email|missing-password/.test(c) ? "Sai mã quản trị." : e.message);
+  }
+}
+const commitAll = async ops => { for (let i = 0; i < ops.length; i += 400) { const b = writeBatch(db); ops.slice(i, i + 400).forEach(f => f(b)); await b.commit(); } };
+const putWords = async (ref, words) => {
+  if (new Blob([JSON.stringify(words)]).size > 900000) throw new Error("Bộ từ quá lớn (gần 1 MB). Hãy tách thành 2 bộ.");
+  await setDoc(ref, { words }, { merge: true });
+};
+const cleanWord = r => ({ korean: r.korean, romanization: r.romanization ?? "", meaningVi: r.meaningVi, exampleKo: r.exampleKo ?? "", exampleVi: r.exampleVi ?? "" });
+const packFields = p => ({ title: p.title, description: p.description ?? "", level: p.level ?? "", topic: p.topic ?? "", coverEmoji: p.coverEmoji || "📘", isPublished: p.isPublished !== false });
+const gramFields = p => ({ level: p.level ?? "", topic: p.topic ?? "", structure: p.structure, title: p.title, meaning: p.meaning ?? "", exampleKo: p.exampleKo ?? "", exampleVi: p.exampleVi ?? "" });
+
+async function rpc(fn, a) {
+  await adminSignIn(a.p_pin);
+  const pref = id => doc(db, "packs", String(id));
+  switch (fn) {
+    case "admin_list": {
+      const [p, g] = await Promise.all([getDocs(collection(db, "packs")), getDocs(collection(db, "grammar"))]);
+      return { packs: p.docs.map(fromDoc), grammar: g.docs.map(fromDoc) };
+    }
+    case "admin_save_pack": {
+      const p = a.p, id = p.id ?? newId();
+      await setDoc(pref(id), p.id ? packFields(p) : { ...packFields(p), words: [], order: newId() }, { merge: true });
+      return id;
+    }
+    case "admin_save_word": {
+      const p = a.p, ref = pref(p.packId), s = await getDoc(ref);
+      if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
+      const words = [...(s.data().words || [])], k = p.id == null ? -1 : words.findIndex(x => x.id === p.id);
+      if (k >= 0) words[k] = { id: p.id, ...cleanWord(p) }; else words.push({ id: newId(), ...cleanWord(p) });
+      await putWords(ref, words); return words[k >= 0 ? k : words.length - 1].id;
+    }
+    case "admin_import_words": {
+      const ref = pref(a.p_pack), s = await getDoc(ref);
+      if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
+      await putWords(ref, [...(s.data().words || []), ...a.rows.map(r => ({ id: newId(), ...cleanWord(r) }))]); return;
+    }
+    case "admin_save_grammar": {
+      const p = a.p, id = p.id ?? newId();
+      await setDoc(doc(db, "grammar", String(id)), p.id ? gramFields(p) : { ...gramFields(p), order: newId() }, { merge: true });
+      return id;
+    }
+    case "admin_delete": {
+      if (a.p_table === "words") {
+        const pk = PACKS.find(p => p.words.some(w => w.id === a.p_id)); if (!pk) return;
+        const ref = pref(pk.id), s = await getDoc(ref);
+        return setDoc(ref, { words: (s.data().words || []).filter(w => w.id !== a.p_id) }, { merge: true });
+      }
+      return deleteDoc(doc(db, a.p_table, String(a.p_id)));
+    }
+    case "admin_reorder": return commitAll(a.p_ids.map((id, i) => b => b.update(doc(db, a.p_table, String(id)), { order: i + 1 })));
+    case "admin_replace_all": {
+      const [op, og] = await Promise.all([getDocs(collection(db, "packs")), getDocs(collection(db, "grammar"))]);
+      const ops = [...op.docs, ...og.docs].map(d => b => b.delete(d.ref));
+      a.p_data.packs.forEach((p, i) => { const ref = pref(newId()), data = { ...packFields(p), words: (p.words || []).map(w => ({ id: newId(), ...cleanWord(w) })), order: i + 1 }; ops.push(b => b.set(ref, data)); });
+      (a.p_data.grammar || []).forEach((g, i) => { const ref = doc(db, "grammar", String(newId())), data = { ...gramFields(g), order: i + 1 }; ops.push(b => b.set(ref, data)); });
+      return commitAll(ops);
+    }
+    case "admin_change_pin": await updatePassword(auth.currentUser, a.p_new); signedPin = a.p_new; return;
+  }
+  throw new Error("Chức năng không tồn tại: " + fn);
+}
+
+
 
 // ---------- Lưu trữ local ----------
 const STORE_KEY = "hangul.local.v1";
@@ -145,7 +226,7 @@ const shuffle = a => a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).
 
 function shell(content) {
   const nav = `<nav class="nav">${link("/vocabulary", "Từ vựng", "가")}${link("/grammar", "Ngữ pháp", "文")}${link("/tutor", "Gia sư", "✦")}${link("/profile", "Tôi", "◉")}</nav>`;
-  app.innerHTML = `<div class="shell"><header class="topbar"><a href="#/vocabulary" data-route class="brand"><span class="mark">ㅎ</span>Hangul</a>${nav}<span class="user-pill">${state.user ? `Xin chào, ${esc(state.user.name)}` : "Học một chút, nhớ lâu hơn"}</span><a href="#/" data-route class="exit-btn" aria-label="Thoát ra màn hình chờ">⏻ <span>Thoát</span></a></header><main id="main" class="main">${loadError ? `<div class="notice" style="margin-bottom:16px">Không kết nối được Supabase — đang dùng dữ liệu đã lưu trên máy (nếu có). Lý do: <b>${esc(loadErrorMsg)}</b></div>` : ""}${content}</main><footer class="footer">Hangul · Học tiếng Hàn từng ngày, theo nhịp của bạn. · <a href="#/admin">Quản trị</a></footer></div>`;
+  app.innerHTML = `<div class="shell"><header class="topbar"><a href="#/vocabulary" data-route class="brand"><span class="mark">ㅎ</span>Hangul</a>${nav}<span class="user-pill">${state.user ? `Xin chào, ${esc(state.user.name)}` : "Học một chút, nhớ lâu hơn"}</span><a href="#/" data-route class="exit-btn" aria-label="Thoát ra màn hình chờ">⏻ <span>Thoát</span></a></header><main id="main" class="main">${loadError ? `<div class="notice" style="margin-bottom:16px">Không kết nối được Firebase — đang dùng dữ liệu đã lưu trên máy (nếu có). Lý do: <b>${esc(loadErrorMsg)}</b></div>` : ""}${content}</main><footer class="footer">Hangul · Học tiếng Hàn từng ngày, theo nhịp của bạn. · <a href="#/admin">Quản trị</a></footer></div>`;
 }
 
 const packCards = items => items.map(p => `<article class="card pack-card"><span class="emoji">${esc(p.coverEmoji)}</span><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><div class="meta"><span>${esc(p.level)} · ${esc(p.topic)} · ${p.words.length} từ</span><span class="row"><a class="button secondary" href="#/lesson/${p.id}" data-route>Học →</a><a class="button ghost" href="#/quiz/${p.id}" data-route>Kiểm tra</a></span></div></article>`).join("");
@@ -326,7 +407,7 @@ function profile() {
   });
 }
 
-// ---------- Quản trị (mã được kiểm tra ở server Supabase qua các hàm admin_*) ----------
+// ---------- Quản trị (mã = mật khẩu tài khoản admin trên Firebase Authentication) ----------
 let adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null, adminPending = null, adminPendingG = null, adminPendingP = null;
 const adminLoad = async () => { const d = await rpc("admin_list", { p_pin: adminPin }); fill(d.packs, d.grammar); };
 const call = async (fn, args) => {
@@ -356,7 +437,7 @@ const fld = (name, label, val = "", o = {}) => `<label class="field"><span>${lab
 const btn = (act, label, attrs = "", cls = "") => `<button type="button" class="button sm ${cls}" data-act="${act}" ${attrs}>${label}</button>`;
 
 function adminGate() {
-  shell(`<div class="eyebrow">Quản trị</div><h1>Đăng nhập quản trị</h1><div class="card"><form id="gate" class="row"><input type="password" name="pin" placeholder="Mã quản trị" required autocomplete="current-password"><button class="button">Mở khoá</button></form></div><p class="notice">Mã được kiểm tra trên Supabase, nên người dùng khác không thể sửa dữ liệu nếu không biết mã.</p>`);
+  shell(`<div class="eyebrow">Quản trị</div><h1>Đăng nhập quản trị</h1><div class="card"><form id="gate" class="row"><input type="password" name="pin" placeholder="Mã quản trị" required autocomplete="current-password"><button class="button">Mở khoá</button></form></div><p class="notice">Mã được kiểm tra bởi Firebase Authentication, nên người dùng khác không thể sửa dữ liệu nếu không biết mã.</p>`);
   document.querySelector("#gate").onsubmit = async e => {
     e.preventDefault(); adminPin = String(new FormData(e.currentTarget).get("pin"));
     try { await adminLoad(); admin(); } catch (err) { adminPin = null; alert(err.message); }
@@ -388,7 +469,7 @@ function adminGrammarImportCard() {
 }
 
 function adminData() {
-  return `<div class="card"><h2>Sao lưu nội dung</h2><p class="lead">Xuất toàn bộ nội dung ra JSON. Nhập JSON sẽ THAY THẾ toàn bộ dữ liệu trên Supabase.</p><div class="row">${btn("export-content", "Xuất JSON")}<label class="button ghost sm">Nhập JSON<input id="imp-content" type="file" accept="application/json" hidden></label></div></div><div class="card" style="margin-top:16px"><h2>Đổi mã quản trị</h2><form data-form="pin" class="row"><input type="password" name="pin" minlength="8" placeholder="Mã mới (≥ 8 ký tự)" required><button class="button sm">Đổi mã</button></form></div>`;
+  return `<div class="card"><h2>Sao lưu nội dung</h2><p class="lead">Xuất toàn bộ nội dung ra JSON. Nhập JSON sẽ THAY THẾ toàn bộ dữ liệu trên Firebase.</p><div class="row">${btn("export-content", "Xuất JSON")}<label class="button ghost sm">Nhập JSON<input id="imp-content" type="file" accept="application/json" hidden></label></div></div><div class="card" style="margin-top:16px"><h2>Đổi mã quản trị</h2><form data-form="pin" class="row"><input type="password" name="pin" minlength="8" placeholder="Mã mới (≥ 8 ký tự)" required><button class="button sm">Đổi mã</button></form></div>`;
 }
 
 function adminForm() {
@@ -648,7 +729,7 @@ function admin() {
     try {
       const d = JSON.parse(await ev.target.files[0].text());
       if (!Array.isArray(d.packs) || !Array.isArray(d.grammar) || d.packs.some(p => !Array.isArray(p.words))) throw 0;
-      if (!confirm("Thay thế TOÀN BỘ nội dung trên Supabase bằng file này?")) return;
+      if (!confirm("Thay thế TOÀN BỘ nội dung trên Firebase bằng file này?")) return;
       await call("admin_replace_all", { p_data: { packs: d.packs, grammar: d.grammar } });
     } catch { alert("File nội dung không hợp lệ."); }
   };
