@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hangul — Học tiếng Hàn</title>
 <meta name="theme-color" content="#c94f6d">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-180.png">
 <style>
 :root{--bg:#f6efe9;--surface:#fffaf6;--fg:#2b2528;--muted:#7a6f74;--primary:#c94f6d;--primary-fg:#fff;--border:#e6d8d0;--ok:#2e9e5b;--r:16px}
 @media(prefers-color-scheme:dark){:root{--bg:#17131a;--surface:#221c26;--fg:#f1e9ee;--muted:#a89ca3;--border:#392f3e}}
@@ -81,6 +84,13 @@ table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 10px
 .app-icon:hover .app-tile,.app-icon:focus-visible .app-tile{transform:scale(1.06)}.app-label{font-size:.8rem;text-align:center;white-space:nowrap}
 .exit-btn{display:flex;align-items:center;gap:6px;margin-left:auto;padding:7px 12px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:.9rem;white-space:nowrap}
 .exit-btn:hover{color:var(--primary);border-color:var(--primary)}
+.skeleton{min-height:150px;background:linear-gradient(90deg,var(--surface) 25%,color-mix(in srgb,var(--border) 60%,var(--surface)) 50%,var(--surface) 75%);background-size:200% 100%;animation:sk 1.3s ease-in-out infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.main{padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.button:disabled{opacity:.5;cursor:not-allowed}.button:active{transform:translateY(1px)}
+@media(pointer:coarse){.button,.nav a,.answer,.tok,.opt span,.exit-btn{min-height:44px}.button.sm{min-height:40px}}
+@media(max-width:480px){.grid{grid-template-columns:1fr}.item{align-items:flex-start}.study-actions{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.skeleton{animation:none}}
 </style>
 </head>
 <body>
@@ -91,7 +101,7 @@ table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 10px
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, setPersistence, inMemoryPersistence, signInWithEmailAndPassword, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, where, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // ---------- Firebase (Project settings → General → Your apps → Web app → firebaseConfig) ----------
 const firebaseConfig = {
@@ -114,19 +124,51 @@ const fromDoc = d => ({ words: [], ...d.data(), id: Number(d.id) });
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id;
 const fill = (packs, grammar) => { PACKS.splice(0, PACKS.length, ...[...packs].sort(byOrder)); GRAMMAR.splice(0, GRAMMAR.length, ...[...grammar].sort(byOrder)); };
 const CACHE_KEY = "hangul.content.cache.fb";
+function readCache() {  // đọc bản lưu trên máy để hiện nội dung ngay, không phải chờ mạng
+  try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if (c && Array.isArray(c.P) && Array.isArray(c.G)) { fill(c.P, c.G); return true; } } catch {}
+  return false;
+}
 async function loadPublic() {
-  try {
-    if (auth.currentUser) await signOut(auth);
-    signedPin = null;
-    const [p, g] = await Promise.all([getDocs(query(collection(db, "packs"), where("isPublished", "==", true))), getDocs(collection(db, "grammar"))]);
-    const P = p.docs.map(fromDoc), G = g.docs.map(fromDoc);
-    fill(P, G); try { localStorage.setItem(CACHE_KEY, JSON.stringify({ P, G })); } catch {}
-    return true;
-  } catch (e) {
-    loadErrorMsg = e?.message || String(e);
-    try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); fill(c.P, c.G); } catch {}
-    return false;
+  // Chờ Firebase Auth khởi tạo xong trước khi kiểm tra/đăng xuất phiên quản trị.
+  await authReady;
+  console.info("[Hangul] Firebase project:", fbApp.options.projectId);
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      if (adminPin === null && auth.currentUser) await signOut(auth);
+      signedPin = adminPin === null ? null : signedPin;
+
+      console.info("[Hangul] Đang tải collection packs...");
+      const p = await getDocs(query(
+        collection(db, "packs"),
+        where("isPublished", "==", true)
+      ));
+      console.info("[Hangul] packs tải thành công:", p.size, "tài liệu");
+
+      console.info("[Hangul] Đang tải collection grammar...");
+      const g = await getDocs(collection(db, "grammar"));
+      console.info("[Hangul] grammar tải thành công:", g.size, "tài liệu");
+
+      const P = p.docs.map(fromDoc), G = g.docs.map(fromDoc);
+      if (adminPin !== null) return true; // Không ghi đè dữ liệu đầy đủ của phiên quản trị.
+      fill(P, G);
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ P, G })); } catch {}
+      loadErrorMsg = "";
+      return true;
+    } catch (e) {
+      loadErrorMsg = e?.message || String(e);
+      console.error("[Hangul] Lỗi tải dữ liệu Firebase:", {
+        projectId: fbApp.options.projectId,
+        code: e?.code || "unknown",
+        message: loadErrorMsg,
+        error: e
+      });
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1200));
+    }
   }
+
+  readCache();
+  return false;
 }
 
 // ---------- Lớp tương thích: giữ nguyên tên rpc("admin_*") để phần quản trị phía dưới không phải sửa ----------
@@ -141,10 +183,7 @@ async function adminSignIn(pin) {
   }
 }
 const commitAll = async ops => { for (let i = 0; i < ops.length; i += 400) { const b = writeBatch(db); ops.slice(i, i + 400).forEach(f => f(b)); await b.commit(); } };
-const putWords = async (ref, words) => {
-  if (new Blob([JSON.stringify(words)]).size > 900000) throw new Error("Bộ từ quá lớn (gần 1 MB). Hãy tách thành 2 bộ.");
-  await setDoc(ref, { words }, { merge: true });
-};
+const checkWordsSize = words => { if (new Blob([JSON.stringify(words)]).size > 900000) throw new Error("Bộ từ quá lớn (gần 1 MB). Hãy tách thành 2 bộ."); };
 const cleanWord = r => ({ korean: r.korean, romanization: r.romanization ?? "", meaningVi: r.meaningVi, exampleKo: r.exampleKo ?? "", exampleVi: r.exampleVi ?? "" });
 const packFields = p => ({ title: p.title, description: p.description ?? "", level: p.level ?? "", topic: p.topic ?? "", coverEmoji: p.coverEmoji || "📘", isPublished: p.isPublished !== false });
 const gramFields = p => ({ level: p.level ?? "", topic: p.topic ?? "", structure: p.structure, title: p.title, meaning: p.meaning ?? "", exampleKo: p.exampleKo ?? "", exampleVi: p.exampleVi ?? "" });
@@ -163,16 +202,24 @@ async function rpc(fn, a) {
       return id;
     }
     case "admin_save_word": {
-      const p = a.p, ref = pref(p.packId), s = await getDoc(ref);
-      if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
-      const words = [...(s.data().words || [])], k = p.id == null ? -1 : words.findIndex(x => x.id === p.id);
-      if (k >= 0) words[k] = { id: p.id, ...cleanWord(p) }; else words.push({ id: newId(), ...cleanWord(p) });
-      await putWords(ref, words); return words[k >= 0 ? k : words.length - 1].id;
+      const p = a.p, ref = pref(p.packId);
+      return runTransaction(db, async tx => {  // đọc-sửa-ghi trong transaction để 2 thiết bị cùng sửa không ghi đè nhau
+        const s = await tx.get(ref);
+        if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
+        const words = [...(s.data().words || [])], k = p.id == null ? -1 : words.findIndex(x => x.id === p.id);
+        if (k >= 0) words[k] = { id: p.id, ...cleanWord(p) }; else words.push({ id: newId(), ...cleanWord(p) });
+        checkWordsSize(words); tx.set(ref, { words }, { merge: true });
+        return words[k >= 0 ? k : words.length - 1].id;
+      });
     }
     case "admin_import_words": {
-      const ref = pref(a.p_pack), s = await getDoc(ref);
-      if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
-      await putWords(ref, [...(s.data().words || []), ...a.rows.map(r => ({ id: newId(), ...cleanWord(r) }))]); return;
+      const ref = pref(a.p_pack);
+      return runTransaction(db, async tx => {
+        const s = await tx.get(ref);
+        if (!s.exists()) throw new Error("Không tìm thấy bộ từ.");
+        const words = [...(s.data().words || []), ...a.rows.map(r => ({ id: newId(), ...cleanWord(r) }))];
+        checkWordsSize(words); tx.set(ref, { words }, { merge: true });
+      });
     }
     case "admin_save_grammar": {
       const p = a.p, id = p.id ?? newId();
@@ -182,17 +229,21 @@ async function rpc(fn, a) {
     case "admin_delete": {
       if (a.p_table === "words") {
         const pk = PACKS.find(p => p.words.some(w => w.id === a.p_id)); if (!pk) return;
-        const ref = pref(pk.id), s = await getDoc(ref);
-        return setDoc(ref, { words: (s.data().words || []).filter(w => w.id !== a.p_id) }, { merge: true });
+        const ref = pref(pk.id);
+        return runTransaction(db, async tx => {
+          const s = await tx.get(ref);
+          tx.set(ref, { words: (s.data().words || []).filter(w => w.id !== a.p_id) }, { merge: true });
+        });
       }
       return deleteDoc(doc(db, a.p_table, String(a.p_id)));
     }
     case "admin_reorder": return commitAll(a.p_ids.map((id, i) => b => b.update(doc(db, a.p_table, String(id)), { order: i + 1 })));
     case "admin_replace_all": {
       const [op, og] = await Promise.all([getDocs(collection(db, "packs")), getDocs(collection(db, "grammar"))]);
-      const ops = [...op.docs, ...og.docs].map(d => b => b.delete(d.ref));
+      const ops = [];
       a.p_data.packs.forEach((p, i) => { const ref = pref(newId()), data = { ...packFields(p), words: (p.words || []).map(w => ({ id: newId(), ...cleanWord(w) })), order: i + 1 }; ops.push(b => b.set(ref, data)); });
       (a.p_data.grammar || []).forEach((g, i) => { const ref = doc(db, "grammar", String(newId())), data = { ...gramFields(g), order: i + 1 }; ops.push(b => b.set(ref, data)); });
+      [...op.docs, ...og.docs].forEach(d => ops.push(b => b.delete(d.ref)));  // xoá bản cũ sau cùng
       return commitAll(ops);
     }
     case "admin_change_pin": await updatePassword(auth.currentUser, a.p_new); signedPin = a.p_new; return;
@@ -358,11 +409,12 @@ function finishQuiz() {
 // Gia sư offline: tra cứu trong từ vựng + ngữ pháp có sẵn, không gọi AI bên ngoài.
 function localTutor(prompt) {
   const q = prompt.toLowerCase();
+  const rom = w => String(w.romanization || "").toLowerCase();
   const words = visible().flatMap(p => p.words).filter(w =>
-    q.includes(w.korean) || q.includes(w.romanization.toLowerCase()) || (w.meaningVi.length > 2 && q.includes(w.meaningVi.toLowerCase())));
+    (w.korean && q.includes(w.korean)) || (rom(w) && q.includes(rom(w))) || (w.meaningVi && w.meaningVi.length > 2 && q.includes(w.meaningVi.toLowerCase())));
   const gram = GRAMMAR.filter(g => {
-    const marks = g.structure.replace(/N \+ |V\/A \+ /, "").split("/");
-    return marks.some(m => q.includes(m)) || q.includes(g.title.toLowerCase());
+    const marks = String(g.structure || "").replace(/N \+ |V\/A \+ /, "").split("/").map(m => m.trim()).filter(Boolean);
+    return marks.some(m => q.includes(m)) || (g.title && q.includes(g.title.toLowerCase()));
   });
   const out = [];
   if (/은\/는|이\/가|은|는/.test(q) && /(phân biệt|khác)/.test(q))
@@ -400,7 +452,7 @@ function profile() {
     a.download = "hangul-progress.json"; a.click(); URL.revokeObjectURL(a.href);
   });
   document.querySelector("#import")?.addEventListener("change", async e => {
-    try { const d = JSON.parse(await e.target.files[0].text()); Object.assign(state, { user: d.user ?? null, progress: d.progress ?? {}, sessions: d.sessions ?? [] }); save(); profile(); } catch { alert("File không hợp lệ."); }
+    try { const d = JSON.parse(await e.target.files[0].text()); if (!d || typeof d !== "object" || Array.isArray(d)) throw 0; Object.assign(state, { user: d.user && typeof d.user.name === "string" ? { name: d.user.name.slice(0, 60) } : null, progress: d.progress && typeof d.progress === "object" && !Array.isArray(d.progress) ? d.progress : {}, sessions: Array.isArray(d.sessions) ? d.sessions.slice(-500) : [] }); save(); profile(); } catch { alert("File không hợp lệ."); }
   });
   document.querySelector("#reset")?.addEventListener("click", () => {
     if (confirm("Xoá toàn bộ tiến độ và hồ sơ?")) { Object.assign(state, defaults()); save(); renderPage(); }
@@ -408,7 +460,7 @@ function profile() {
 }
 
 // ---------- Quản trị (mã = mật khẩu tài khoản admin trên Firebase Authentication) ----------
-let adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null, adminPending = null, adminPendingG = null, adminPendingP = null;
+let adminWordLimit = 100, adminPin = null, adminTab = "packs", adminEdit = null, adminPackId = null, adminPending = null, adminPendingG = null, adminPendingP = null;
 const adminLoad = async () => { const d = await rpc("admin_list", { p_pin: adminPin }); fill(d.packs, d.grammar); };
 const call = async (fn, args) => {
   try { const r = await rpc(fn, { p_pin: adminPin, ...args }); await adminLoad(); admin(); return r; }
@@ -454,7 +506,8 @@ function adminWords() {
   const p = PACKS.find(x => x.id === adminPackId);
   if (!p) { adminPackId = null; return adminPacks(); }
   return `${btn("back", "← Danh sách bộ", "", "ghost")}<div class="section-head"><h2>${esc(p.title)} · ${p.words.length} từ</h2><div class="row">${btn("new-word", "+ Thêm từ")}${btn("export-csv", "Xuất CSV", `data-id="${p.id}"`, "ghost")}</div></div>` +
-    (p.words.map(w => `<div class="item"><div><strong lang="ko">${esc(w.korean)}</strong> · ${esc(w.romanization)}<br><small>${esc(w.meaningVi)}</small></div><div class="row">${btn("edit-word", "Sửa", `data-id="${w.id}"`, "secondary")}${btn("del-word", "Xoá", `data-id="${w.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Bộ này chưa có từ nào.</div>`) +
+    (p.words.slice(0, adminWordLimit).map(w => `<div class="item"><div><strong lang="ko">${esc(w.korean)}</strong> · ${esc(w.romanization)}<br><small>${esc(w.meaningVi)}</small></div><div class="row">${btn("edit-word", "Sửa", `data-id="${w.id}"`, "secondary")}${btn("del-word", "Xoá", `data-id="${w.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Bộ này chưa có từ nào.</div>`) +
+    (p.words.length > adminWordLimit ? `<div class="row" style="justify-content:center;margin:16px 0">${btn("more-words", `Hiện thêm (còn ${p.words.length - adminWordLimit} từ)`, "", "ghost")}</div>` : "") +
     adminImportCard();
 }
 
@@ -652,7 +705,8 @@ async function adminClick(e) {
     }
     case "tpl": return download("mau-tu-vung.csv", "\ufeffsep=,\n" + ["Tiếng Hàn,Phiên âm,Nghĩa,Ví dụ Hàn,Dịch ví dụ", "안녕하세요,annyeonghaseyo,Xin chào,안녕하세요!,Xin chào!", "감사합니다,gamsahamnida,Cảm ơn,,"].join("\n"), "text/csv");
     case "back": adminPackId = null; adminPending = null; return admin();
-    case "words": adminPackId = id; adminPending = null; return admin();
+    case "words": adminPackId = id; adminPending = null; adminWordLimit = 100; return admin();
+    case "more-words": adminWordLimit += 200; return admin();
     case "new-pack": adminEdit = { k: "pack", id: null }; return admin();
     case "edit-pack": adminEdit = { k: "pack", id }; return admin();
     case "new-word": adminEdit = { k: "word", id: null }; return admin();
@@ -727,9 +781,12 @@ function admin() {
     if (ev.target.id === "imp-packs") return pickWords(ev.target.files[0], stagePacks);
     if (ev.target.id !== "imp-content") return;
     try {
-      const d = JSON.parse(await ev.target.files[0].text());
-      if (!Array.isArray(d.packs) || !Array.isArray(d.grammar) || d.packs.some(p => !Array.isArray(p.words))) throw 0;
-      if (!confirm("Thay thế TOÀN BỘ nội dung trên Firebase bằng file này?")) return;
+      const d = JSON.parse(await ev.target.files[0].text()), str = v => typeof v === "string" && v.trim();
+      if (!Array.isArray(d.packs) || !Array.isArray(d.grammar)
+        || d.packs.some(p => !p || !str(p.title) || !Array.isArray(p.words) || p.words.some(w => !w || !str(w.korean) || !str(w.meaningVi)))
+        || d.grammar.some(g => !g || !str(g.structure) || !str(g.title))) throw 0;
+      if (!confirm(`Thay thế TOÀN BỘ nội dung trên Firebase bằng file này (${d.packs.length} bộ từ, ${d.grammar.length} bài ngữ pháp)?\nTrình duyệt sẽ tự tải về một bản sao lưu nội dung hiện tại trước khi thay.`)) return;
+      download(`hangul-truoc-khi-thay-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ packs: PACKS, grammar: GRAMMAR }, null, 2));
       await call("admin_replace_all", { p_data: { packs: d.packs, grammar: d.grammar } });
     } catch { alert("File nội dung không hợp lệ."); }
   };
@@ -748,12 +805,19 @@ function renderPage() {
   shell(`<div class="card empty"><h1>Không tìm thấy trang</h1><a class="button" href="#/" data-route>Về trang chủ</a></div>`);
 }
 
-window.addEventListener("hashchange", () => { renderPage(); window.scrollTo(0, 0); });
+window.addEventListener("hashchange", () => {
+  if (path() !== "/admin" && adminPin !== null) { adminPin = null; signedPin = null; signOut(auth).catch(() => {}); }  // rời khu quản trị = đóng phiên
+  renderPage(); window.scrollTo(0, 0);
+});
 (async function init() {
-  shell(`<div class="card empty">Đang tải nội dung…</div>`);
+  const cached = readCache();
+  if (cached) renderPage();  // có bản lưu: hiện ngay, cập nhật nền
+  else shell(`<div class="eyebrow">Đang tải…</div><div class="grid" aria-busy="true" aria-label="Đang tải nội dung">${'<div class="card skeleton"></div>'.repeat(6)}</div>`);
   loadError = !(await loadPublic());
-  renderPage();
+  if (!cached || ["/", "/vocabulary", "/grammar"].includes(path())) renderPage();  // không làm gián đoạn bài đang học/làm
 })();
+
+if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("./sw.js").catch(() => {});
 
 </script>
 </body>
