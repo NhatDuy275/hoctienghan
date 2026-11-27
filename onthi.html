@@ -62,16 +62,17 @@ a{color:inherit;text-decoration:none}h1{font-size:clamp(2rem,5vw,3.2rem);line-he
 .qgroup{margin:18px 0 8px}
 .bar{height:6px;border-radius:9px;background:var(--border);overflow:hidden;margin-bottom:6px}.bar i{display:block;height:100%;background:var(--primary)}
 .field{display:grid;gap:4px;margin-bottom:12px;font-size:.9rem;color:var(--muted)}
-textarea,input:not([type=file]):not([type=radio]){width:100%;font:inherit;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--fg)}
+textarea,select,input:not([type=file]):not([type=radio]){width:100%;font:inherit;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--fg)}
 textarea{min-height:70px;resize:vertical}
 .item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border)}
+.item>div:first-child{min-width:0;flex:1 1 260px}
 .danger{color:#d64545!important}summary{cursor:pointer;font-weight:600}code{overflow-wrap:anywhere}
 table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:left}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 .skeleton{min-height:140px;background:linear-gradient(90deg,var(--surface) 25%,color-mix(in srgb,var(--border) 60%,var(--surface)) 50%,var(--surface) 75%);background-size:200% 100%;animation:sk 1.3s ease-in-out infinite}
 @keyframes sk{to{background-position:-200% 0}}
 .main{padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
-.button:disabled{opacity:.5;cursor:not-allowed}.button:active{transform:translateY(1px)}
+.button:active{transform:translateY(1px)}
 @media(pointer:coarse){.button,.nav a,.answer,.opt span,.exit-btn{min-height:44px}.button.sm{min-height:40px}}
 @media(prefers-reduced-motion:reduce){.skeleton{animation:none}}
 </style>
@@ -81,7 +82,7 @@ table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{padding:6px 10px
 // Ôn thi – 1 web duy nhất + Firebase (Firestore + Authentication), hash routing. Giao diện & cách dùng giống Hangul.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, setPersistence, inMemoryPersistence, signInWithEmailAndPassword, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = { apiKey: "AIzaSyDVfyRcI8GMyd56H6Agj2qUmzH-K1uTyG4", authDomain: "onthi-cdfc5.firebaseapp.com", projectId: "onthi-cdfc5", appId: "1:21467745610:web:4d8b176c45d56b3b3d45b3" };
 const ADMIN_EMAIL = "nguyenduy27529@gmail.com";  // "mã quản trị" = mật khẩu của tài khoản này trong Authentication
@@ -94,7 +95,7 @@ let loadError = "", adminPin = null;
 
 let lastId = 0;
 const newId = () => (lastId = Math.max(lastId + 1, Date.now() * 100));
-const fromDoc = d => ({ ...d.data(), id: Number(d.id) });
+const fromDoc = d => ({ questions: [], ...d.data(), id: Number(d.id) });
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id;
 const fillData = (s, e) => { SUBJECTS.splice(0, SUBJECTS.length, ...[...s].sort(byOrder)); EXAMS.splice(0, EXAMS.length, ...[...e].sort(byOrder)); };
 const CACHE_KEY = "onthi.content.cache.v1";
@@ -133,7 +134,7 @@ const shuffle = a => a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).
 const TL = { mc: "Trắc nghiệm", tf: "Đúng/Sai", short: "Trả lời ngắn" };
 const tsum = qs => ["mc", "tf", "short"].map(t => [TL[t].toLowerCase(), qs.filter(q => q.type === t).length]).filter(x => x[1]).map(([l, n]) => `${n} ${l}`).join(" · ");
 const subject = id => SUBJECTS.find(x => x.id === id);
-const testsFor = id => EXAMS.filter(x => x.subjectId === id && x.isPublished !== false);
+const testsFor = id => EXAMS.filter(x => x.subjectId === id && x.isPublished !== false && x.questions?.length);
 const testById = id => EXAMS.find(x => x.id === id && x.isPublished !== false);
 const opt = (name, val, label, cfg) => `<label class="opt"><input type="radio" name="${name}" value="${val}" ${String(cfg[name]) === String(val) ? "checked" : ""}><span>${label}</span></label>`;
 const lnk = (href, title) => `<a href="#${href}" class="${path() === href ? "active" : ""}">${title}</a>`;
@@ -153,25 +154,30 @@ function subjectPage(id) {
   shell(`<div class="toolbar"><a class="button ghost" href="#/">← Các môn học</a><span class="chip">${esc(s.icon || "📚")} ${esc(s.title)}</span></div><div class="eyebrow">Chọn đề thi</div><h1>${esc(s.title)}</h1><p class="lead">${esc(s.description || "Chọn đề để bắt đầu ôn tập.")}</p><div class="grid">${ts.map(t => `<article class="card exam-test"><span class="eyebrow">${t.questions.length} câu hỏi</span><h2>${esc(t.title)}</h2>${t.description ? `<p class="lead">${esc(t.description)}</p>` : ""}<div class="meta"><span>${tsum(t.questions)}</span><a class="button" href="#/test/${t.id}">Bắt đầu →</a></div></article>`).join("") || `<div class="card empty">Môn này hiện chưa có đề thi.</div>`}</div>`);
 }
 
-let scfg = { mode: "chill", shuf: "0", shufc: "0" }, session = null;
+let scfg = { mode: "chill", shuf: "0", shufc: "0", type: "all" }, session = null;
 function setup(id) {
   const t = testById(id);
   if (!t || !Array.isArray(t.questions) || !t.questions.length) return shell(`<div class="card empty">Không tìm thấy đề thi. <a href="#/" style="color:var(--primary)">Về trang chủ</a></div>`);
   const s = subject(t.subjectId), hasMc = t.questions.some(q => q.type === "mc");
+  const types = ["mc", "tf", "short"].filter(x => t.questions.some(q => q.type === x)), cnt = x => t.questions.filter(q => q.type === x).length;
+  const cfgT = types.includes(scfg.type) ? scfg : { ...scfg, type: "all" };
   session = null;
   shell(`<div class="toolbar"><a class="button ghost" href="#/subject/${t.subjectId}">← ${esc(s?.title || "Môn học")}</a><span class="chip">${t.questions.length} câu</span></div><h1>${esc(t.title)}</h1><p class="lead">${esc(t.description || tsum(t.questions))}</p><form id="sform" class="card">
 <div class="eyebrow">Chế độ</div><div class="row qgroup">${opt("mode", "chill", "😌 Chill", scfg)}${opt("mode", "hard", "🔥 Try hard", scfg)}</div>
+${types.length > 1 ? `<div class="eyebrow">Loại câu hỏi</div><div class="row qgroup">${opt("type", "all", `Tất cả (${t.questions.length})`, cfgT)}${types.map(x => opt("type", x, `${TL[x]} (${cnt(x)})`, cfgT)).join("")}</div>` : ""}
 <div class="eyebrow">Thứ tự câu hỏi</div><div class="row qgroup">${opt("shuf", "0", "Theo đề", scfg)}${opt("shuf", "1", "Xáo trộn", scfg)}</div>
 ${hasMc ? `<div class="eyebrow">Thứ tự đáp án trắc nghiệm</div><div class="row qgroup">${opt("shufc", "0", "Theo đề", scfg)}${opt("shufc", "1", "Xáo trộn", scfg)}</div>` : ""}
 <p class="notice"><b>Chill:</b> làm xong mỗi câu bấm Nộp là thấy đáp án ngay, sai thì có giải thích.<br><b>Try hard:</b> làm hết đề mới thấy đáp án và giải thích câu sai.</p>
 <button class="button" style="margin-top:16px">Bắt đầu →</button></form>`);
   document.querySelector("#sform").onsubmit = e => {
     e.preventDefault(); const d = new FormData(e.currentTarget);
-    scfg = { mode: d.get("mode"), shuf: d.get("shuf"), shufc: d.get("shufc") || scfg.shufc }; begin(t);
+    scfg = { mode: d.get("mode"), shuf: d.get("shuf"), shufc: d.get("shufc") || scfg.shufc, type: d.get("type") || "all" }; begin(t);
   };
 }
 function begin(t, only) {  // only: danh sách câu (dùng cho "làm lại câu sai")
-  let qs = only || t.questions; if (scfg.shuf === "1") qs = shuffle(qs);
+  let qs = only || t.questions.filter(q => scfg.type === "all" || q.type === scfg.type);
+  if (!qs.length) qs = t.questions;
+  if (scfg.shuf === "1") qs = shuffle(qs);
   qs = qs.map(q => q.type === "mc" && scfg.shufc === "1" ? { ...q, choices: shuffle(q.choices) } : q);
   session = { examId: t.id, subjectId: t.subjectId, title: t.title, mode: scfg.mode, qs, i: 0, ans: [], locked: [] };
   const target = `/doing/${t.id}`; if (path() === target) renderQuestion(); else location.hash = "#" + target;
@@ -222,7 +228,7 @@ function finish() {
   state.sessions.push({ examId: z.examId, title: z.title, mode: z.mode, total, correct: score, at: Date.now() }); state.sessions = state.sessions.slice(-100); save();
   shell(`<div class="card empty"><div class="eyebrow">${esc(z.title)} · ${z.mode === "hard" ? "🔥 Try hard" : "😌 Chill"}</div><h1>${Math.round(score / total * 100)}%</h1><p>Bạn đúng ${score}/${total} câu.</p><div class="row" style="justify-content:center"><button class="button" id="again">Làm lại</button>${wrong.length ? `<button class="button secondary" id="redo">Làm lại ${wrong.length} câu sai</button>` : ""}<a class="button ghost" href="#/test/${z.examId}">Đổi cài đặt</a><a class="button ghost" href="#/subject/${z.subjectId}">Danh sách đề</a></div></div><div class="section-head"><h2>Tổng hợp đáp án</h2></div>${qs.map((q, k) => `<article class="card review ${res[k] ? "right" : "wrong"}"><div class="row"><b>${res[k] ? "✓" : "✗"}</b><span class="chip">Câu ${k + 1} · ${TL[q.type]}</span></div><p class="exam-question">${esc(q.question)}</p>${q.type === "tf" && q.items?.length ? `<p>${q.items.map((t, j) => `${lt(j)}) ${esc(t)}`).join("<br>")}</p>` : ""}${res[k] ? `<p>Đáp án: <b>${esc(ansText(q))}</b></p>` : `<p>Bạn trả lời: <s>${esc(userText(q, ans[k]))}</s></p><p>Đáp án: <b>${esc(ansText(q))}</b></p>${q.explanation ? `<p>💡 <b>Giải thích:</b> ${esc(q.explanation)}</p>` : ""}`}</article>`).join("")}`);
   const t = testById(z.examId) || { id: z.examId, subjectId: z.subjectId, title: z.title, questions: qs };
-  document.querySelector("#again").onclick = () => begin(t, t.questions);
+  document.querySelector("#again").onclick = () => begin(t);
   document.querySelector("#redo")?.addEventListener("click", () => begin(t, wrong));
 }
 
@@ -242,7 +248,8 @@ function download(name, text, type = "application/json") {
 }
 
 // ---------- Quản trị ----------
-let adminTab = "subjects", adminSubjId = null, adminEdit = null, adminPending = null;
+let adminTab = "subjects", adminSubjId = null, adminExamId = null, adminEdit = null, adminPending = null;
+let adminQType = "all", adminQEdit = null, adminPendingQ = null;
 const commitAll = async ops => { for (let i = 0; i < ops.length; i += 400) { const b = writeBatch(db); ops.slice(i, i + 400).forEach(f => f(b)); await b.commit(); } };
 async function adminLoad() {
   const [s, e] = await Promise.all([getDocs(collection(db, "examSubjects")), getDocs(collection(db, "exams"))]);
@@ -250,9 +257,16 @@ async function adminLoad() {
 }
 const act = async fn => { try { await fn(); await adminLoad(); } catch (e) { alert(e?.message || String(e)); } admin(); };
 const btn = (a, label, attrs = "", cls = "") => `<button type="button" class="button sm ${cls}" data-act="${a}" ${attrs}>${label}</button>`;
-const fld = (name, label, val = "", req = false, area = false) => `<label class="field"><span>${label}</span>${area ? `<textarea name="${name}" rows="3">${esc(val)}</textarea>` : `<input name="${name}" value="${esc(val)}" ${req ? "required" : ""}>`}</label>`;
+const fld = (name, label, val = "", req = false, area = false) => `<label class="field"><span>${label}</span>${area ? `<textarea name="${name}" rows="3" ${req ? "required" : ""}>${esc(val)}</textarea>` : `<input name="${name}" value="${esc(val)}" ${req ? "required" : ""}>`}</label>`;
 const moved = (arr, i, d) => { const a = arr.map(x => x.id), j = i + d; if (j < 0 || j >= a.length) return null; [a[i], a[j]] = [a[j], a[i]]; return a; };
 const reorder = (col, arr, i, d) => { const a = moved(arr, i, d); if (a) act(() => commitAll(a.map((id, k) => b => b.update(doc(db, col, String(id)), { order: k + 1 })))); };
+async function mutateQ(examId, fn) {  // đọc đề mới nhất → sửa danh sách câu hỏi → ghi lại
+  const ref = doc(db, "exams", String(examId)), s = await getDoc(ref);
+  if (!s.exists()) throw Error("Không tìm thấy đề thi.");
+  const qs = [...(s.data().questions || [])]; fn(qs);
+  if (new Blob([JSON.stringify(qs)]).size > 850000) throw Error("Đề vượt giới hạn dung lượng Firestore (≈1 MB). Hãy tách thành 2 đề.");
+  await setDoc(ref, { questions: qs }, { merge: true });
+}
 
 function adminGate() {
   shell(`<div class="eyebrow">Quản trị</div><h1>Đăng nhập quản trị</h1><div class="card"><form id="gate" class="row"><input type="password" name="pin" placeholder="Mã quản trị" required autocomplete="current-password" style="flex:1;min-width:200px"><button class="button">Mở khoá</button></form></div><p class="notice">Dùng mật khẩu của tài khoản quản trị Firebase. Mã được Firebase Authentication kiểm tra nên người khác không thể sửa dữ liệu.</p>`);
@@ -270,9 +284,39 @@ function adminTests() {
   const s = subject(adminSubjId); if (!s) { adminSubjId = null; return adminSubjects(); }
   const list = EXAMS.filter(e => e.subjectId === s.id), p = adminPending;
   const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: ${p.exams.length} đề · ${p.exams.reduce((n, x) => n + x.questions.length, 0)} câu</h3>${p.exams.map(x => `<p><b>${esc(x.title)}</b> · ${x.questions.length} câu (${tsum(x.questions)})</p><ol>${x.questions.slice(0, 3).map(q => `<li>${esc(q.question.slice(0, 90))} <small>[${TL[q.type]}]</small></li>`).join("")}</ol>`).join("")}${p.skipped.length ? `<p class="notice">Bỏ qua ${p.skipped.length} dòng không hợp lệ:<br>${p.skipped.slice(0, 8).map(esc).join("<br>")}</p>` : ""}<div class="row" style="margin-top:12px">${btn("confirm-import", "Lưu đề thi")}${btn("cancel-import", "Huỷ", "", "ghost")}</div></div>` : "";
-  return `${btn("back", "← Danh sách môn", "", "ghost")}<div class="section-head"><h2>${esc(s.icon || "📚")} ${esc(s.title)} · ${list.length} đề</h2></div>` +
-    (list.map((t, i) => `<div class="item"><div><strong>${esc(t.title)}</strong> ${t.isPublished === false ? '<span class="chip">Đã ẩn</span>' : ""}<br><small>${t.questions.length} câu · ${tsum(t.questions)}${t.sourceFileName ? " · " + esc(t.sourceFileName) : ""}</small></div><div class="row">${btn("edit-test", "Đổi tên", `data-id="${t.id}"`, "secondary")}${btn("toggle-test", t.isPublished === false ? "Hiện" : "Ẩn", `data-id="${t.id}"`, "ghost")}${btn("up-test", "↑", `data-i="${i}"`, "ghost")}${btn("down-test", "↓", `data-i="${i}"`, "ghost")}${btn("del-test", "Xoá", `data-id="${t.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Môn này chưa có đề thi.</div>`) + preview +
-    `<div class="card" style="margin-top:16px"><h3>Thêm đề thi từ file</h3><p class="lead">Excel/CSV, mỗi dòng một câu, cột: <b>Loại | Câu hỏi | A | B | C | D | Đáp án | Giải thích</b>.<br>• <b>Trắc nghiệm</b>: điền A–D, đáp án là A/B/C/D.<br>• <b>Đúng sai</b>: để trống A–D rồi đáp án <b>Đúng</b>/<b>Sai</b>; hoặc điền các ý a–d vào A–D, đáp án dạng <b>Đ,S,Đ,S</b>.<br>• <b>Trả lời ngắn</b>: đáp án là kết quả đúng; nhiều đáp án chấp nhận cách nhau bằng <b>|</b>.<br>Đáp án và giải thích lấy 100% từ file. Cũng nhận file <b>.json</b> (<code>{"exams":[…]}</code>).</p><label class="field"><span>Tên đề (bỏ trống = lấy theo tên file)</span><input id="ex-title"></label><div class="row"><label class="button sm">Chọn file Excel / CSV / JSON<input id="imp-exam" type="file" accept=".xlsx,.csv,.tsv,.txt,.json,application/json" hidden></label>${btn("tpl-csv", "Mẫu CSV", "", "ghost")}${btn("tpl-json", "Mẫu JSON", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="ecsv" style="margin-top:10px">${fld("title", "Tên đề", "", true)}<textarea name="ecsv" rows="6" style="margin-bottom:10px" placeholder="Trắc nghiệm\t1 + 1 = ?\t1\t2\t3\t4\tB\t1 + 1 = 2" required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
+  return `${btn("back", "← Danh sách môn", "", "ghost")}<div class="section-head"><h2>${esc(s.icon || "📚")} ${esc(s.title)} · ${list.length} đề</h2>${btn("new-test", "+ Tạo đề trống")}</div>` +
+    (list.map((t, i) => `<div class="item"><div><strong>${esc(t.title)}</strong> ${t.isPublished === false ? '<span class="chip">Đã ẩn</span>' : ""}${t.questions.length ? "" : '<span class="chip">Chưa có câu hỏi</span>'}<br><small>${t.questions.length} câu${t.questions.length ? " · " + tsum(t.questions) : ""}${t.sourceFileName ? " · " + esc(t.sourceFileName) : ""}</small></div><div class="row">${btn("exam-open", "Câu hỏi", `data-id="${t.id}"`)}${btn("edit-test", "Đổi tên", `data-id="${t.id}"`, "secondary")}${btn("toggle-test", t.isPublished === false ? "Hiện" : "Ẩn", `data-id="${t.id}"`, "ghost")}${btn("up-test", "↑", `data-i="${i}"`, "ghost")}${btn("down-test", "↓", `data-i="${i}"`, "ghost")}${btn("del-test", "Xoá", `data-id="${t.id}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">Môn này chưa có đề thi. Bấm "+ Tạo đề trống" rồi thêm câu hỏi, hoặc tải cả đề từ file.</div>`) + preview +
+    `<div class="card" style="margin-top:16px"><h3>Thêm cả đề từ file (đề tổng hợp nhiều loại)</h3><p class="lead">Excel/CSV, mỗi dòng một câu, cột: <b>Loại | Câu hỏi | A | B | C | D | Đáp án | Giải thích</b> (Loại: Trắc nghiệm / Đúng sai / Trả lời ngắn). Cũng nhận file <b>.json</b> (<code>{"exams":[…]}</code>). Muốn nhập <b>riêng từng loại</b> cho dễ, hãy bấm <b>Câu hỏi</b> ở đề rồi dùng các ô nhập theo loại.</p><label class="field"><span>Tên đề (bỏ trống = lấy theo tên file)</span><input id="ex-title"></label><div class="row"><label class="button sm">Chọn file Excel / CSV / JSON<input id="imp-exam" type="file" accept=".xlsx,.csv,.tsv,.txt,.json,application/json" hidden></label>${btn("tpl-csv", "Mẫu CSV", "", "ghost")}${btn("tpl-json", "Mẫu JSON", "", "ghost")}</div><details style="margin-top:14px"><summary>Hoặc copy các ô trong Excel rồi dán vào đây</summary><form data-form="ecsv" style="margin-top:10px">${fld("title", "Tên đề", "", true)}<textarea name="ecsv" rows="6" style="margin-bottom:10px" placeholder="Trắc nghiệm\t1 + 1 = ?\t1\t2\t3\t4\tB\t1 + 1 = 2" required></textarea><button class="button sm">Xem trước</button></form></details></div>`;
+}
+
+// ---- Quản lý câu hỏi trong một đề, tách theo loại ----
+const QT = {
+  mc: { cols: "Câu hỏi | A | B | C | D | Đáp án (A–D) | Giải thích", tpl: [["Câu hỏi", "A", "B", "C", "D", "Đáp án", "Giải thích"], ["Phần mềm nào sau đây là phần mềm bảng tính?", "Word", "Excel", "PowerPoint", "Paint", "B", "Excel dùng để xử lý bảng tính."]] },
+  tf: { cols: "Câu hỏi | Ý a | Ý b | Ý c | Ý d | Đáp án | Giải thích. Câu đơn: để trống các ý, đáp án Đúng/Sai. Nhiều ý: đáp án dạng Đ,S,Đ,S", tpl: [["Câu hỏi", "Ý a", "Ý b", "Ý c", "Ý d", "Đáp án", "Giải thích"], ["Internet là mạng máy tính toàn cầu.", "", "", "", "", "Đúng", ""], ["Xét các phát biểu về mạng máy tính:", "Router kết nối các mạng với nhau", "LAN là mạng diện rộng", "Wi-Fi là mạng không dây", "Switch dùng để soạn thảo văn bản", "Đ,S,Đ,S", "LAN là mạng cục bộ; Switch là thiết bị mạng."]] },
+  short: { cols: "Câu hỏi | Đáp án (nhiều đáp án chấp nhận cách nhau bằng |) | Giải thích", tpl: [["Câu hỏi", "Đáp án", "Giải thích"], ["CPU viết tắt của cụm từ nào (tiếng Anh)?", "Central Processing Unit", "CPU là bộ xử lý trung tâm."], ["Thủ đô của Việt Nam?", "Hà Nội|Ha Noi", ""]] }
+};
+function adminQuestions() {
+  const t = EXAMS.find(x => x.id === adminExamId); if (!t) { adminExamId = null; return adminTests(); }
+  const qs = t.questions || [], cnt = x => qs.filter(q => q.type === x).length, all = adminQType === "all", p = adminPendingQ;
+  const rows = qs.map((q, k) => [q, k]).filter(([q]) => all || q.type === adminQType);
+  const chips = [["all", `Tất cả (${qs.length})`], ...["mc", "tf", "short"].map(x => [x, `${TL[x]} (${cnt(x)})`])];
+  const preview = p ? `<div class="card" style="margin-top:16px;border-color:var(--primary)"><h3>Xem trước: thêm ${p.questions.length} câu ${TL[p.type].toLowerCase()} vào đề</h3><ol>${p.questions.slice(0, 5).map(q => `<li>${esc(q.question.slice(0, 100))} <small>→ ${esc(ansText(q))}</small></li>`).join("")}</ol>${p.questions.length > 5 ? `<small>… và ${p.questions.length - 5} câu nữa</small>` : ""}${p.skipped.length ? `<p class="notice">Bỏ qua ${p.skipped.length} dòng không hợp lệ:<br>${p.skipped.slice(0, 8).map(esc).join("<br>")}</p>` : ""}<div class="row" style="margin-top:12px">${btn("confirm-q", `Thêm ${p.questions.length} câu`)}${btn("cancel-q-import", "Huỷ", "", "ghost")}</div></div>` : "";
+  const imp = ["mc", "tf", "short"].map(x => `<div class="card" style="margin-top:12px"><h3>Nhập nhiều câu ${TL[x].toLowerCase()}</h3><p class="lead">Cột: <b>${QT[x].cols}</b></p><div class="row"><label class="button sm">Chọn file Excel / CSV<input id="imp-q-${x}" type="file" accept=".xlsx,.csv,.tsv,.txt" hidden></label>${btn("tplq", "Mẫu CSV", `data-t="${x}"`, "ghost")}</div><details style="margin-top:10px"><summary>Hoặc dán các ô từ Excel</summary><form data-form="qcsv-${x}" style="margin-top:10px"><textarea name="q" rows="5" required></textarea><button class="button sm" style="margin-top:8px">Xem trước</button></form></details></div>`).join("");
+  return `${btn("exam-back", "← Danh sách đề", "", "ghost")}<div class="section-head"><h2>${esc(t.title)} · ${qs.length} câu</h2><div class="row">${["mc", "tf", "short"].map(x => btn("new-q", `+ ${TL[x]}`, `data-t="${x}"`)).join("")}</div></div><div class="row" style="margin-bottom:8px">${chips.map(([k, l]) => btn("qtype", l, `data-t="${k}"`, adminQType === k ? "" : "ghost")).join("")}</div>` +
+    (rows.map(([q, k]) => `<div class="item"><div><span class="chip">Câu ${k + 1} · ${TL[q.type]}</span><br><strong>${esc(q.question.slice(0, 140))}${q.question.length > 140 ? "…" : ""}</strong><br><small>Đáp án: ${esc(ansText(q))}${q.explanation ? " · 💡 có giải thích" : ""}</small></div><div class="row">${btn("edit-q", "Sửa", `data-i="${k}"`, "secondary")}${all ? btn("up-q", "↑", `data-i="${k}"`, "ghost") + btn("down-q", "↓", `data-i="${k}"`, "ghost") : ""}${btn("del-q", "Xoá", `data-i="${k}"`, "ghost danger")}</div></div>`).join("") || `<div class="card empty">${qs.length ? "Không có câu nào thuộc loại này." : "Đề này chưa có câu hỏi. Thêm từng câu bằng các nút phía trên hoặc nhập từ file bên dưới."}</div>`) + preview + imp;
+}
+function qForm() {
+  const e = adminQEdit, t = EXAMS.find(x => x.id === adminExamId), q = e.i != null ? t?.questions[e.i] : null, ty = e.t;
+  let f = fld("question", "Nội dung câu hỏi", q?.question, true, true);
+  if (ty === "mc") {
+    const ch = q?.choices || [], n = Math.min(6, Math.max(4, ch.length)), sel = q ? ch.indexOf(q.answer) : 0;
+    f += Array.from({ length: n }, (_, k) => fld("o" + k, `Phương án ${LET[k]}`, ch[k], k < 2)).join("") + `<label class="field"><span>Đáp án đúng</span><select name="ans">${Array.from({ length: n }, (_, k) => `<option value="${LET[k]}" ${k === sel ? "selected" : ""}>${LET[k]}</option>`).join("")}</select></label>`;
+  } else if (ty === "tf") {
+    const a = q ? (Array.isArray(q.answer) ? q.answer.map(v => v ? "Đ" : "S").join(",") : q.answer ? "Đúng" : "Sai") : "Đúng";
+    f += fld("items", "Các ý a, b, c… (mỗi ý một dòng; để trống nếu là câu đúng/sai đơn)", (q?.items || []).join("\n"), false, true) + fld("ans", "Đáp án (Đúng / Sai, hoặc nhiều ý: Đ,S,Đ,S)", a, true);
+  } else f += fld("ans", "Đáp án chấp nhận (mỗi dòng một đáp án)", q ? (Array.isArray(q.answer) ? q.answer : [q.answer]).join("\n") : "", true, true);
+  f += fld("explanation", "Giải thích (không bắt buộc)", q?.explanation, false, true);
+  return `<div class="card"><div class="eyebrow">${esc(t?.title || "")}</div><h2>${e.i != null ? "Sửa" : "Thêm"} câu ${TL[ty].toLowerCase()}</h2><form data-form="q">${f}<div class="row"><button class="button">Lưu câu hỏi</button>${btn("cancel-q", "Huỷ", "", "ghost")}</div></form></div>`;
 }
 function adminData() {
   return `<div class="card"><h2>Sao lưu nội dung</h2><p class="lead">Xuất toàn bộ môn học và đề thi ra JSON. Nhập JSON sẽ THAY THẾ toàn bộ dữ liệu trên Firebase.</p><div class="row">${btn("export", "Xuất JSON")}<label class="button ghost sm">Nhập JSON sao lưu<input id="imp-backup" type="file" accept="application/json" hidden></label></div></div><div class="card" style="margin-top:16px"><h2>Đổi mã quản trị</h2><form data-form="pin" class="row"><input type="password" name="pin" minlength="8" placeholder="Mã mới (≥ 8 ký tự)" required style="flex:1;min-width:200px"><button class="button sm">Đổi mã</button></form><p class="notice" style="margin-top:12px">Lưu ý: tài khoản quản trị này dùng chung với các app khác cùng email trên project Firebase này.</p></div>`;
@@ -280,6 +324,7 @@ function adminData() {
 function adminForm() {
   const e = adminEdit; let title, fields;
   if (e.k === "subj") { const s = subject(e.id) || {}; title = e.id ? "Sửa môn học" : "Thêm môn học"; fields = fld("title", "Tên môn (vd: Tin học)", s.title, true) + fld("icon", "Biểu tượng (emoji)", s.icon ?? "📚") + fld("description", "Mô tả", s.description, false, true); }
+  else if (e.k === "newtest") { title = "Tạo đề trống"; fields = fld("title", "Tên đề", "", true) + fld("description", "Mô tả", "", false, true); }
   else { const t = EXAMS.find(x => x.id === e.id) || {}; title = "Sửa đề thi"; fields = fld("title", "Tên đề", t.title, true) + fld("description", "Mô tả", t.description, false, true); }
   return `<div class="card"><h2>${title}</h2><form data-form="${e.k}">${fields}<div class="row"><button class="button">Lưu</button>${btn("cancel", "Huỷ", "", "ghost")}</div></form></div>`;
 }
@@ -334,41 +379,67 @@ function parseCsvLine(l, d = ",\t") {
 }
 const delimOf = t => { const l = t.split(/\r?\n/).find(x => x.trim() && !/^sep=/i.test(x)) || ""; return l.includes("\t") ? "\t" : l.split(";").length > l.split(",").length ? ";" : ","; };
 const textRows = t => { t = t.replace(/^\ufeff/, ""); const d = delimOf(t); return t.split(/\r?\n/).filter(l => l.trim() && !/^sep=/i.test(l)).map(l => parseCsvLine(l, d)); };
+async function readRows(file) {  // .xlsx / .csv / .tsv / .txt → mảng dòng
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".xls")) throw new Error("File .xls (Excel cũ) chưa hỗ trợ. Hãy lưu lại dạng .xlsx hoặc CSV UTF-8.");
+  if (name.endsWith(".xlsx")) return readXlsx(file);
+  const txt = await file.text();
+  if (txt.includes("\ufffd")) throw new Error("File không phải UTF-8. Trong Excel chọn Save As → CSV UTF-8, hoặc dùng .xlsx.");
+  return textRows(txt);
+}
 
-// ---------- Chuyển file → đề thi (đáp án & giải thích lấy 100% từ file) ----------
+// ---------- Chuyển dòng → câu hỏi (đáp án & giải thích lấy 100% từ file) ----------
+const LET = "ABCDEF";
 const base = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").trim();
 const typeOf = s => { const x = base(s); return /^(mc|tn|trac|multiple)/.test(x) ? "mc" : /^(tf|ds|dung|true)/.test(x) ? "tf" : /^(short|tl|tra loi|ngan)/.test(x) ? "short" : ""; };
 const tfv = s => { const x = base(s); return /^(d|dung|t|true)$/.test(x) ? true : /^(s|sai|f|false)$/.test(x) ? false : null; };
 const parseTf = s => { let tk = s.split(/[\s,;|\/]+/).filter(Boolean); if (tk.length === 1 && tk[0].length > 1 && tfv(tk[0]) === null) tk = [...tk[0]]; const v = tk.map(tfv); return v.length && v.every(x => x !== null) ? v : null; };
-function stageRows(rows, title, source) {
+function buildQ(t, question, o, ansRaw, exp) {  // trả {q} hoặc {err}
+  question = String(question ?? "").trim(); ansRaw = String(ansRaw ?? "").trim(); exp = String(exp ?? "").trim();
+  if (!question) return { err: "thiếu câu hỏi" };
+  if (!ansRaw) return { err: "thiếu đáp án" };
+  const opts = o.map(x => String(x ?? "").trim()), filled = opts.filter(Boolean), extra = exp ? { explanation: exp } : {};
+  if (t === "mc") {
+    if (filled.length < 2) return { err: "trắc nghiệm cần ít nhất 2 phương án" };
+    const k = /^[A-Fa-f]$/.test(ansRaw) ? ansRaw.toUpperCase().charCodeAt(0) - 65 : opts.findIndex(x => x && nn(x) === nn(ansRaw));
+    if (k < 0 || !opts[k]) return { err: "đáp án không khớp phương án nào" };
+    return { q: { type: "mc", question, choices: filled, answer: opts[k], ...extra } };
+  }
+  if (t === "tf") {
+    const v = parseTf(ansRaw), items = filled.length >= 2 ? filled : [];
+    if (!v) return { err: "đáp án đúng/sai không hợp lệ (dùng Đúng/Sai hoặc Đ/S)" };
+    if (v.length !== (items.length || 1)) return { err: `số đáp án (${v.length}) khác số ý (${items.length || 1})` };
+    return { q: items.length ? { type: "tf", question, items, answer: v, ...extra } : { type: "tf", question, answer: v[0], ...extra } };
+  }
+  const l = ansRaw.split("|").map(x => x.trim()).filter(Boolean);
+  return { q: { type: "short", question, answer: l.length > 1 ? l : l[0], ...extra } };
+}
+function stageRows(rows, title, source) {  // đề tổng hợp: Loại | Câu hỏi | A | B | C | D | Đáp án | Giải thích
   let off = 1;
   if (rows.length && /^(loai|type)/.test(base(rows[0][0]))) { rows = rows.slice(1); off = 2; }
   const questions = [], skipped = [];
   rows.forEach((c, n) => {
-    const question = String(c[1] ?? "").trim(), ansRaw = String(c[6] ?? "").trim(), exp = String(c[7] ?? "").trim(), bad = why => skipped.push(`Dòng ${n + off}: ${why}`);
-    if (!question && !ansRaw) return;
-    if (!question) return bad("thiếu câu hỏi");
-    if (!ansRaw) return bad("thiếu đáp án");
-    const o = [2, 3, 4, 5].map(k => String(c[k] ?? "").trim()), filled = o.filter(Boolean), extra = exp ? { explanation: exp } : {};
+    if (!String(c[1] ?? "").trim() && !String(c[6] ?? "").trim()) return;
+    const o = [2, 3, 4, 5].map(k => c[k]);
     let t = typeOf(c[0]);
-    if (!t) t = filled.length >= 2 && /^[A-Da-d]$/.test(ansRaw) ? "mc" : parseTf(ansRaw) ? "tf" : "short";
-    if (t === "mc") {
-      const k = /^[A-Da-d]$/.test(ansRaw) ? ansRaw.toUpperCase().charCodeAt(0) - 65 : o.findIndex(x => x && nn(x) === nn(ansRaw));
-      if (filled.length < 2) return bad("trắc nghiệm cần ít nhất 2 phương án");
-      if (k < 0 || !o[k]) return bad("đáp án không khớp phương án nào");
-      questions.push({ type: "mc", question, choices: filled, answer: o[k], ...extra });
-    } else if (t === "tf") {
-      const v = parseTf(ansRaw), items = filled.length >= 2 ? filled : [];
-      if (!v) return bad("đáp án đúng/sai không hợp lệ (dùng Đúng/Sai hoặc Đ/S)");
-      if (v.length !== (items.length || 1)) return bad(`số đáp án (${v.length}) khác số ý (${items.length || 1})`);
-      questions.push(items.length ? { type: "tf", question, items, answer: v, ...extra } : { type: "tf", question, answer: v[0], ...extra });
-    } else {
-      const l = ansRaw.split("|").map(x => x.trim()).filter(Boolean);
-      questions.push({ type: "short", question, answer: l.length > 1 ? l : l[0], ...extra });
-    }
+    if (!t) t = o.filter(x => String(x ?? "").trim()).length >= 2 && /^[A-Da-d]$/.test(String(c[6] ?? "").trim()) ? "mc" : parseTf(String(c[6] ?? "").trim()) ? "tf" : "short";
+    const r = buildQ(t, c[1], o, c[6], c[7]);
+    r.q ? questions.push(r.q) : skipped.push(`Dòng ${n + off}: ${r.err}`);
   });
   if (!questions.length) return alert(skipped.length ? "Không có câu hợp lệ.\n" + skipped.slice(0, 6).join("\n") : "File trống.");
-  setPending([{ title, questions, sourceFileName: source }], skipped);
+  adminPending = { exams: [{ title, questions, sourceFileName: source }], skipped }; admin();
+}
+function stageTyped(type, rows) {  // nhập riêng từng loại vào đề đang mở
+  let off = 1;
+  if (rows.length && /^(cau hoi|question)/.test(base(rows[0][0]))) { rows = rows.slice(1); off = 2; }
+  const questions = [], skipped = [], ai = type === "short" ? 1 : 5;
+  rows.forEach((c, n) => {
+    if (!String(c[0] ?? "").trim() && !String(c[ai] ?? "").trim()) return;
+    const r = type === "short" ? buildQ("short", c[0], [], c[1], c[2]) : buildQ(type, c[0], [1, 2, 3, 4].map(k => c[k]), c[5], c[6]);
+    r.q ? questions.push(r.q) : skipped.push(`Dòng ${n + off}: ${r.err}`);
+  });
+  if (!questions.length) return alert(skipped.length ? "Không có câu hợp lệ.\n" + skipped.slice(0, 6).join("\n") : "File trống.");
+  adminPendingQ = { examId: adminExamId, type, questions, skipped }; admin();
 }
 function validateFile(d) {  // file JSON {"exams":[{title,description?,questions:[...]}]}
   if (!d || !Array.isArray(d.exams) || !d.exams.length) throw Error('File cần có danh sách "exams".');
@@ -386,26 +457,24 @@ function validateFile(d) {  // file JSON {"exams":[{title,description?,questions
   });
   return d.exams;
 }
-function setPending(exams, skipped, source) { adminPending = { exams, skipped }; admin(); }
 async function pickExam(file) {
   if (!file) return;
   try {
-    const name = file.name.toLowerCase(), title = document.querySelector("#ex-title")?.value.trim() || file.name.replace(/\.[^.]+$/, "");
-    if (name.endsWith(".xls")) throw new Error("File .xls (Excel cũ) chưa hỗ trợ. Hãy lưu lại dạng .xlsx hoặc CSV UTF-8.");
-    if (name.endsWith(".json")) return setPending(validateFile(JSON.parse(await file.text())).map(x => ({ ...x, sourceFileName: file.name })), []);
-    if (name.endsWith(".xlsx")) return stageRows(await readXlsx(file), title, file.name);
-    const txt = await file.text();
-    if (txt.includes("\ufffd")) throw new Error("File không phải UTF-8. Trong Excel chọn Save As → CSV UTF-8, hoặc dùng .xlsx.");
-    stageRows(textRows(txt), title, file.name);
+    const title = document.querySelector("#ex-title")?.value.trim() || file.name.replace(/\.[^.]+$/, "");
+    if (file.name.toLowerCase().endsWith(".json")) { adminPending = { exams: validateFile(JSON.parse(await file.text())).map(x => ({ ...x, sourceFileName: file.name })), skipped: [] }; return admin(); }
+    stageRows(await readRows(file), title, file.name);
   } catch (e) { alert(e.message || "Không đọc được file."); }
 }
+async function pickTyped(type, file) { if (!file) return; try { stageTyped(type, await readRows(file)); } catch (e) { alert(e.message || "Không đọc được file."); } }
 
+const csvOut = rows => "\ufeffsep=,\n" + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
 async function adminClick(e) {
   const b = e.target.closest("[data-act]"); if (!b) return;
-  const a = b.dataset.act, id = Number(b.dataset.id), i = Number(b.dataset.i);
+  const a = b.dataset.act, id = Number(b.dataset.id), i = Number(b.dataset.i), ty = b.dataset.t;
   const subjTests = () => EXAMS.filter(x => x.subjectId === adminSubjId);
+  const curQs = () => EXAMS.find(x => x.id === adminExamId)?.questions || [];
   switch (a) {
-    case "tab": adminTab = b.dataset.tab; adminEdit = null; adminSubjId = null; adminPending = null; return admin();
+    case "tab": adminTab = b.dataset.tab; adminEdit = adminQEdit = null; adminSubjId = adminExamId = null; adminPending = adminPendingQ = null; return admin();
     case "lock": await signOut(auth).catch(() => {}); adminPin = null; await loadPublic(); return admin();
     case "cancel": adminEdit = null; return admin();
     case "cancel-import": adminPending = null; return admin();
@@ -413,6 +482,7 @@ async function adminClick(e) {
     case "back": adminSubjId = null; adminPending = null; return admin();
     case "new-subj": adminEdit = { k: "subj", id: null }; return admin();
     case "edit-subj": adminEdit = { k: "subj", id }; return admin();
+    case "new-test": adminEdit = { k: "newtest" }; return admin();
     case "edit-test": adminEdit = { k: "test", id }; return admin();
     case "toggle-subj": return act(() => setDoc(doc(db, "examSubjects", String(id)), { isPublished: subject(id).isPublished === false }, { merge: true }));
     case "toggle-test": { const t = EXAMS.find(x => x.id === id); return act(() => setDoc(doc(db, "exams", String(id)), { isPublished: t.isPublished === false }, { merge: true })); }
@@ -425,7 +495,7 @@ async function adminClick(e) {
       if (!confirm(`Xoá môn "${s.title}" và ${owned.length} đề thi trong đó?`)) return;
       return act(() => commitAll([bt => bt.delete(doc(db, "examSubjects", String(id))), ...owned.map(t => bt => bt.delete(doc(db, "exams", String(t.id))))]));
     }
-    case "del-test": { const t = EXAMS.find(x => x.id === id); if (!confirm(`Xoá đề "${t.title}"?`)) return; return act(() => deleteDoc(doc(db, "exams", String(id)))); }
+    case "del-test": { const t = EXAMS.find(x => x.id === id); if (!confirm(`Xoá đề "${t.title}" cùng ${t.questions.length} câu hỏi?`)) return; return act(() => deleteDoc(doc(db, "exams", String(id)))); }
     case "confirm-import": {
       const p = adminPending; adminPending = null;
       return act(async () => {
@@ -438,13 +508,27 @@ async function adminClick(e) {
         alert(`Đã lưu ${p.exams.length} đề thi.`);
       });
     }
-    case "tpl-csv": return download("mau-de-thi.csv", "\ufeffsep=,\n" + [
+    // ---- thêm / bớt câu hỏi trong đề ----
+    case "exam-open": adminExamId = id; adminQType = "all"; adminQEdit = null; adminPendingQ = null; return admin();
+    case "exam-back": adminExamId = null; adminQEdit = null; adminPendingQ = null; return admin();
+    case "qtype": adminQType = ty; return admin();
+    case "new-q": adminQEdit = { t: ty, i: null }; return admin();
+    case "edit-q": adminQEdit = { t: curQs()[i]?.type, i }; return admin();
+    case "cancel-q": adminQEdit = null; return admin();
+    case "cancel-q-import": adminPendingQ = null; return admin();
+    case "del-q": {
+      const q = curQs()[i]; if (!q || !confirm(`Xoá câu ${i + 1}: "${q.question.slice(0, 60)}"?`)) return;
+      return act(() => mutateQ(adminExamId, qs => qs.splice(i, 1)));
+    }
+    case "up-q": case "down-q": { const j = i + (a === "up-q" ? -1 : 1); if (j < 0 || j >= curQs().length) return; return act(() => mutateQ(adminExamId, qs => { [qs[i], qs[j]] = [qs[j], qs[i]]; })); }
+    case "confirm-q": { const p = adminPendingQ; adminPendingQ = null; return act(async () => { await mutateQ(p.examId, qs => qs.push(...p.questions)); alert(`Đã thêm ${p.questions.length} câu.`); }); }
+    case "tplq": return download(`mau-${ty}.csv`, csvOut(QT[ty].tpl), "text/csv");
+    case "tpl-csv": return download("mau-de-thi.csv", csvOut([
       ["Loại", "Câu hỏi", "A", "B", "C", "D", "Đáp án", "Giải thích"],
       ["Trắc nghiệm", "Phần mềm nào sau đây là phần mềm bảng tính?", "Word", "Excel", "PowerPoint", "Paint", "B", "Excel dùng để xử lý bảng tính."],
       ["Đúng sai", "Internet là mạng máy tính toàn cầu.", "", "", "", "", "Đúng", ""],
       ["Đúng sai", "Xét các phát biểu về mạng máy tính:", "Router kết nối các mạng với nhau", "LAN là mạng diện rộng", "Wi-Fi là mạng không dây", "Switch dùng để soạn thảo văn bản", "Đ,S,Đ,S", "LAN là mạng cục bộ; Switch là thiết bị mạng."],
-      ["Trả lời ngắn", "CPU viết tắt của cụm từ nào (tiếng Anh)?", "", "", "", "", "Central Processing Unit", "CPU là bộ xử lý trung tâm."]
-    ].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n"), "text/csv");
+      ["Trả lời ngắn", "CPU viết tắt của cụm từ nào (tiếng Anh)?", "", "", "", "", "Central Processing Unit", "CPU là bộ xử lý trung tâm."]]), "text/csv");
     case "tpl-json": return download("mau-de-thi.json", JSON.stringify({ exams: [{ title: "Tên đề thi", description: "Mô tả đề", questions: [
       { type: "mc", question: "Nội dung câu hỏi", choices: ["Lựa chọn A", "Lựa chọn B", "Lựa chọn C", "Lựa chọn D"], answer: "Lựa chọn A", explanation: "Giải thích (không bắt buộc)" },
       { type: "tf", question: "Nội dung câu đúng/sai", answer: true },
@@ -461,6 +545,20 @@ async function adminSubmit(e) {
     return act(() => setDoc(doc(db, "examSubjects", String(nid)), { title: t(d.title), icon: t(d.icon) || "📚", description: t(d.description), ...(s ? {} : { isPublished: true, order: nid }) }, { merge: true }));
   }
   if (kind === "test") { const id = adminEdit.id; adminEdit = null; return act(() => setDoc(doc(db, "exams", String(id)), { title: t(d.title), description: t(d.description) }, { merge: true })); }
+  if (kind === "newtest") {
+    const nid = newId(), sid = adminSubjId; adminEdit = null; adminExamId = nid; adminQType = "all";
+    return act(() => setDoc(doc(db, "exams", String(nid)), { subjectId: sid, title: t(d.title), description: t(d.description), questions: [], isPublished: true, order: nid }));
+  }
+  if (kind === "q") {
+    const ty = adminQEdit.t, idx = adminQEdit.i, ex = adminExamId; let r;
+    if (ty === "mc") r = buildQ("mc", d.question, [0, 1, 2, 3, 4, 5].map(k => d["o" + k]), d.ans, d.explanation);
+    else if (ty === "tf") r = buildQ("tf", d.question, String(d.items || "").split(/\r?\n/), d.ans, d.explanation);
+    else r = buildQ("short", d.question, [], String(d.ans || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean).join("|"), d.explanation);
+    if (!r.q) return alert("Chưa lưu được: " + r.err + ".");
+    adminQEdit = null;
+    return act(() => mutateQ(ex, qs => { if (idx == null) qs.push(r.q); else qs[idx] = r.q; }));
+  }
+  const m = kind.match(/^qcsv-(mc|tf|short)$/); if (m) return stageTyped(m[1], textRows(String(d.q)));
   if (kind === "ecsv") return stageRows(textRows(String(d.ecsv)), t(d.title) || "Đề mới", "");
   if (kind === "pin") {
     try { await updatePassword(auth.currentUser, t(d.pin)); adminPin = t(d.pin); alert("Đã đổi mã quản trị."); } catch (err) { alert(err.message); }
@@ -469,18 +567,21 @@ async function adminSubmit(e) {
 function admin() {
   if (adminPin === null) return adminGate();
   const tabs = [["subjects", "Môn học & đề thi"], ["data", "Dữ liệu"]];
-  const body = adminEdit ? adminForm() : adminTab === "subjects" ? (adminSubjId ? adminTests() : adminSubjects()) : adminData();
-  shell(`<div class="eyebrow">Quản trị</div><h1>Quản lý Ôn thi</h1><div class="row">${tabs.map(([k, v]) => btn("tab", v, `data-tab="${k}"`, adminTab === k && !adminEdit ? "" : "ghost")).join("")}${btn("lock", "Khoá", "", "ghost")}</div><div style="margin-top:20px">${body}</div>`);
+  const body = adminQEdit ? qForm() : adminEdit ? adminForm() : adminTab === "subjects" ? (adminExamId ? adminQuestions() : adminSubjId ? adminTests() : adminSubjects()) : adminData();
+  shell(`<div class="eyebrow">Quản trị</div><h1>Quản lý Ôn thi</h1><div class="row">${tabs.map(([k, v]) => btn("tab", v, `data-tab="${k}"`, adminTab === k && !adminEdit && !adminQEdit ? "" : "ghost")).join("")}${btn("lock", "Khoá", "", "ghost")}</div><div style="margin-top:20px">${body}</div>`);
   const main = document.querySelector("#app");
   main.onclick = adminClick; main.onsubmit = adminSubmit;
   main.onchange = async ev => {
-    if (ev.target.id === "imp-exam") return pickExam(ev.target.files[0]);
-    if (ev.target.id !== "imp-backup") return;
+    const id = ev.target.id, m = id.match(/^imp-q-(mc|tf|short)$/);
+    if (m) return pickTyped(m[1], ev.target.files[0]);
+    if (id === "imp-exam") return pickExam(ev.target.files[0]);
+    if (id !== "imp-backup") return;
     try {
       const d = JSON.parse(await ev.target.files[0].text()), idOk = x => x && Number.isFinite(Number(x.id)) && Number(x.id) > 0;
       if (!Array.isArray(d.subjects) || !Array.isArray(d.exams) || !d.subjects.every(x => idOk(x) && typeof x.title === "string" && x.title.trim())
-        || !d.exams.every(x => idOk(x) && Number.isFinite(Number(x.subjectId)))) throw Error("File sao lưu không hợp lệ.");
-      if (d.exams.length) validateFile({ exams: d.exams });  // kiểm tra từng câu hỏi, lỗi thì báo rõ đề/câu nào
+        || !d.exams.every(x => idOk(x) && Number.isFinite(Number(x.subjectId)) && typeof x.title === "string" && x.title.trim() && Array.isArray(x.questions))) throw Error("File sao lưu không hợp lệ.");
+      const full = d.exams.filter(x => x.questions.length);  // đề trống (chưa có câu) vẫn được khôi phục
+      if (full.length) validateFile({ exams: full });  // kiểm tra từng câu hỏi, lỗi thì báo rõ đề/câu nào
       if (!confirm(`Thay thế TOÀN BỘ nội dung trên Firebase bằng file này (${d.subjects.length} môn, ${d.exams.length} đề)?\nTrình duyệt sẽ tự tải về một bản sao lưu nội dung hiện tại trước khi thay.`)) return;
       download(`onthi-truoc-khi-thay-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ subjects: SUBJECTS, exams: EXAMS }, null, 2));
       const [os, oe] = await Promise.all([getDocs(collection(db, "examSubjects")), getDocs(collection(db, "exams"))]);
